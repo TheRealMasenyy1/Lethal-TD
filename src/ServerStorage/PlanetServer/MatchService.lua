@@ -1,4 +1,6 @@
 --- HANDLES THE THE GAME WHEN THE PLAYER HAS JOINED ---
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerStorage = game:GetService("ServerStorage")
 local PathfindingService = game:GetService("PathfindingService")
@@ -74,36 +76,19 @@ local DeadAttackers = 0
 
 local playerProfiles : profile = {}
 
-local BossDead = false
+local canRestart = false
 local Debug = false
 local IsDefending = workspace.IsDefending
 local DefaultWaitUntilNextWave = 5 -- seconds
 local lost_match = workspace.MatchLost
+local reviveId = 1754270344
 
 
-local Difficulties_nr = {
-	[1] = "Easy";
-	[2] = "Medium";
-	[3] = "Hard";
-}
-
-local function GetInfo(Name) -- Temp function
-	for RealName,Data in pairs(Units) do
-		if RealName == Name then
-			local newData = table.clone(Data)
-			newData.Name = RealName
-			return newData
-		end
-	end
-end
-
-local TempData = {
-	["One"] = GetInfo("DollPilot");
-	["Two"] = GetInfo("FlameThrowerPilot");	
-	["Three"] = GetInfo("ShovelPilot");	
-	["Four"] = GetInfo("Bees");	
-	["Five"] = GetInfo("SprayPilot");	
-}
+-- local Difficulties_nr = {
+-- 	[1] = "Easy";
+-- 	[2] = "Medium";
+-- 	[3] = "Hard";
+-- }
 
 function MatchService.Client:SendToLobby(player)
 	TeleportService:TeleportAsync(tonumber(15696748025),{player})
@@ -441,6 +426,25 @@ function MatchService:FindRoomOrFloor(Data,ToFind)
 	return false
 end
 
+function MatchService:SelectItemByPercentage(items)
+    local totalPercentage = 0
+    for _, item in ipairs(items) do
+        totalPercentage = totalPercentage + item.Percentage
+    end
+    
+	local randomPercentage = math.random() * 100 
+    local accumulatedPercentage = 0
+    
+    for _, item in ipairs(items) do
+        accumulatedPercentage = accumulatedPercentage + item.Percentage
+        if randomPercentage <= accumulatedPercentage then
+            return item
+        end
+    end
+    
+    return nil
+end
+
 function MatchService:GameEnded(Info)
 	-- Show reward depending if the player has finished the map
 	local ProfileService = Knit.GetService("ProfileService")
@@ -476,32 +480,54 @@ function MatchService:GameEnded(Info)
 		end
 	end
 
-	if Info.result == "Lose" and #game.Players:GetChildren() <= 1 then --- If player lose then ask if he wants to revive
+	if Info.result == "Lose" and canRestart then --- If player lose then ask if he wants to revive
 		local ReviveConnection : RBXScriptConnection;
-		local dt_time = 0
+		-- local dt_time = 0
 		local MaxWaitTime = 10
 		GameIsPaused = true
-
-		warn("WE HAVE LOST THE MATCH BUT NO IMAGE DISABLE")
+		canRestart = false
+		
+		local ReviveCountdown = Instance.new("NumberValue")
+		ReviveCountdown.Name = "ReviveCountdown"
+		ReviveCountdown.Parent = workspace
+		ReviveCountdown.Value = MaxWaitTime
 
 		local player = game.Players:GetChildren()[1]	
 		self.Client.ReviveRequest:Fire(player,true)
 
-		ReviveConnection = self.Client.ReviveRequest:Connect(function(_,Answer)
-			HasResponed = Answer
+		ReviveConnection = self.Client.ReviveRequest:Connect(function(sender,Answer)
+			HasResponed = false
+			
+			if Answer then
+				print("[ THIS SHOULD BE FLAGGED AS A HACKER ]")
+				sender:Kick("You have been flagged as a hacker")
+			end
 		end)
+		
+		MarketplaceService.ProcessReceipt = function(receiptInfo)
+			-- print(receiptInfo)
+			local buyer = Players:GetPlayerByUserId(receiptInfo.PlayerId)
+			if not buyer then
+				HasResponed = false
+				return Enum.ProductPurchaseDecision.NotProcessedYet
+			end
+
+			if receiptInfo.ProductId == reviveId then
+				HasResponed = true
+			end
+		end
 
 		repeat 
-			print("Waiting for the player to respond --> ", HasResponed, dt_time)
-			if dt_time >= MaxWaitTime then
+			if ReviveCountdown.Value <= 0 then
 				HasResponed = false;
 				break;
 			end
 			
-			dt_time += RunService.Heartbeat:Wait()
+			ReviveCountdown.Value -= RunService.Heartbeat:Wait()			
 			ClearTheMap()
 		until HasResponed ~= nil
 		
+		ReviveCountdown:Destroy()
 		print(" The Response was --> ", HasResponed)
 
 		if HasResponed then
@@ -511,12 +537,12 @@ function MatchService:GameEnded(Info)
 			RevivePlayer = true
 			GameIsPaused = false
 
-			self.Client.ReviveRequestAccepted:Fire(player,false)
+			self.Client.ReviveRequestAccepted:Fire(player,true)
 			ReviveConnection:Disconnect()
 			return "Continue"
 		else
 			GameIsPaused = false
-			self.Client.ReviveRequestAccepted:Fire(player)
+			self.Client.ReviveRequestAccepted:Fire(player,false)
 			ReviveConnection:Disconnect()
 		end
 	end
@@ -534,18 +560,12 @@ function MatchService:GameEnded(Info)
 	local Blur = Instance.new("BlurEffect")
 	Blur.Parent = game.Lighting
 	
-	
-	
 	if Info.result == "Win" then
 		GameService:RewardWinToAllPlayers()
 	end
-	
-	
-	warn("THE INFO ", Info , DifficultiesValues[Info.Room])
-	
+
 	-- Give rewards and save map if completed
-	for _,player in pairs(game.Players:GetChildren()) do
-		
+	for _,player in pairs(game.Players:GetChildren()) do		
 		task.spawn(function()
 			local CurrentPlayerData = ProfileService:Get(player,"Floors")
 			
@@ -555,14 +575,12 @@ function MatchService:GameEnded(Info)
 				if not Room then
 					CurrentPlayerData[tonumber(Info.Floor)] = 1
 
-					-- 1 == Completed or 0 == not Completed(Doens't matter since it won't be in the data)
 					ProfileService:Update(player, "Floors", function(FloorsData)
 						FloorsData = CurrentPlayerData
 						warn("FLOOR HAS BEEN SAVED  FOR A WHILE --> ", FloorsData)
 						return FloorsData
 					end)
 				end
-				 -- 1 <= 3
 				 if Room >= tonumber(DifficultiesValues[Info.Room]) then --- This makes the other acts optional, should change
 					local succ,_ = pcall(function()
 						CurrentPlayerData = ProfileService:Get(player,"Floors")
@@ -576,16 +594,13 @@ function MatchService:GameEnded(Info)
 							CurrentPlayerData[tonumber(Info.Floor + 1)] = 1
 						end
 						
-						warn("PLLAYER HAS JOINED THE GAME ---> ", CurrentPlayerData)	
 						ProfileService:Update(player, "Floors", function()
 							return CurrentPlayerData
 						end)
 					else
 						warn("Could not get the players data --> ", player.UserId)
 					end
-				end
-				
-				--playerData:Insert("FloorsCompleted",{})
+				end				
 			end
 		end)
 
@@ -607,8 +622,6 @@ end
 
 function MatchService:OrderByPriority(CurrentWaveTable)
 	local waitTable = {}
-	local Compare = 0
-	local OrderCompleted = false
 	local AmountForWave = 0
 	--warn("ORDER BEFORE SORT: ", CurrentWave.Value)
 
@@ -1167,14 +1180,14 @@ function MatchService:GetPlayableMap()
 	
 	local ProfileService = Knit.GetService("ProfileService")
 	
-	local function getlength(Table)
-		local count = 0
-		for name, _ in pairs(Table) do
-			count += 1
-		end
+	-- local function getlength(Table)
+	-- 	local count = 0
+	-- 	for name, _ in pairs(Table) do
+	-- 		count += 1
+	-- 	end
 		
-		return count
-	end
+	-- 	return count
+	-- end
 	
 	local function countMatchingFloorsAndDifficulties(TheTable)
 		local count = {}
@@ -1183,18 +1196,20 @@ function MatchService:GetPlayableMap()
 			local floor = data["Floor"]
 			local difficulty = data["Difficulty"]
 
-			floor = floor or "UnknownFloor"
-			difficulty = difficulty or "Easy"
+			floor = floor
+			difficulty = difficulty
 
 			local key = floor .. "_" .. difficulty  
-
+			
+			print("THE SCANNED DATA ----> ", data, TheTable)
+			
 			if count[key] then
 				count[key] = count[key] + 1
 			else
 				count[key] = 1
 			end
 		end
-
+		print("THE COUNT ----> ", count)
 		return count
 	end
 
@@ -1223,23 +1238,30 @@ function MatchService:GetPlayableMap()
 	end
 
 	local function getHighestDifficulty(data)
-		local maxDifficulty = "Easy"
+		local difficultyValues = {
+			["Easy"] = 1,
+			["Medium"] = 2,
+			["Hard"] = 3,
+			["Insane"] = 4
+		}
+		
+		local maxDifficulty = "Insane"
 		for difficulty, count in pairs(data) do
 			if difficulty ~= "count" and difficulty ~= "floor" then
-				if count > data[maxDifficulty] then
+				if count > data[maxDifficulty] and difficultyValues[difficulty] > data[maxDifficulty] then
 					maxDifficulty = difficulty
 				end
 			end
 		end
 		return maxDifficulty
 	end
-
+	
 	local function highestCountTableTex(DATA)
 		local maxCount = 0
 		local highestTables = {}
 		local allEqual = true
 
-		for name, data in pairs(DATA) do
+		for _, data in pairs(DATA) do
 			local count = data["count"]
 			if count > maxCount then
 				maxCount = count
@@ -1264,9 +1286,10 @@ function MatchService:GetPlayableMap()
 			return highestTables
 		end
 	end
-
+	
+	warn("THE LATEST VOTE FROM THE PLAYERS ---> ", LatestVote)
 	local result = countMatchingFloorsAndDifficulties(LatestVote)
-	local highest = if getlength(LatestVote) > 1 then highestVotedFloorAndDifficulty(result) else nil -- if getlength(LatestVote) > 1 then highestVotedFloorAndDifficulty(result) else nil
+	local highest = highestVotedFloorAndDifficulty(result)-- if getlength(LatestVote) > 1 then highestVotedFloorAndDifficulty(result) else nil
 
 	--print("Highest Voted Floor and Difficulty (Example 1):", highest[1],result)
 
@@ -1329,20 +1352,18 @@ function MatchService:GetPlayableMap()
 
 				for mapsName, value in pairs(FloorMap) do
 					local FloorInTable
-					local succ, err = pcall(function()
+					local succ,_ = pcall(function()
 						FloorInTable = CurrentFloorData[value]
 					end)
 
 					if succ and CurrentFloorData[value] then
 						playerHasMap[mapsName].count = playerHasMap[mapsName].count + 1
 
-						for i = 1, #Difficulties_Modules[mapsName]:GetChildren() do
-							local DiffInMap = DifficultiesToString[i]
+						for Difficulty = 1, #Difficulties_Modules[mapsName]:GetChildren() do
+							local DiffInMap = DifficultiesToString[Difficulty]
 
 							if DiffInMap then
-								local Difficulty_Nr = CurrentFloorData[value]
-
-								if CurrentFloorData[value] >= Difficulty_Nr then
+								if CurrentFloorData[value] >= Difficulty then
 									playerHasMap[mapsName][DiffInMap] = playerHasMap[mapsName][DiffInMap] + 1
 								end
 							end
@@ -1358,9 +1379,7 @@ function MatchService:GetPlayableMap()
 	if highest and highest[1] ~= nil then
 		warn("Highest Voted Floor and Difficulty (Example 1):", highest[1])
 		local StopTheSearch = false
-		local MapValue = parseTex(highest[1])
-		local mapsVoted = {}
-
+	
 		for map,_ in pairs(FloorMap) do
 			playerHasMap[map] = { floor = "Floor"..FloorMap[map], count = 0 }
 			for Diff,_ in pairs(DifficultiesToNumber) do
@@ -1368,7 +1387,7 @@ function MatchService:GetPlayableMap()
 			end
 		end
 
-		for index,FloorInfo in ipairs(highest) do
+		for _,FloorInfo in ipairs(highest) do
 			local Split = string.split(FloorInfo,"_")
 			local Floor = Split[1]
 			local Difficulty = Split[2]
@@ -1379,47 +1398,40 @@ function MatchService:GetPlayableMap()
 
 			for _,players in pairs(game.Players:GetChildren()) do
 				local CurrentFloorData = ProfileService:Get(players,"Floors")			
-
-
+				
 				if CurrentFloorData[Floor_Nr] then
 					playerHasMap[FloorName].count += 1 
 					
-					for i = 1, #Difficulties_Modules[FloorName]:GetChildren() do
-						local DiffInMap = DifficultiesToString[i]
+					local DiffInMap = DifficultiesToString[Difficulty_Nr]
 
-						if DiffInMap then
-							local Difficulty_Nr = CurrentFloorData[Floor_Nr]
-
-							if CurrentFloorData[Floor_Nr] >= Difficulty_Nr then -- if the value is greater than Diff nr then player has it
-								--warn("THE MAPS OF PLAYER ---> ", playerHasMap)
-								playerHasMap[FloorName][DiffInMap] += 1
-							end
+					if DiffInMap then
+						if CurrentFloorData[Floor_Nr] >= Difficulty_Nr then -- if the value is greater than Diff nr then player has it
+							playerHasMap[FloorName][DiffInMap] += 1
 						end
-
 					end
 				else 
 					warn(players.Name, "doesn't have map ",FloorName)
-					self.Client.SendNotification:FireAll(`{players.Name} does not have {FloorName}`,{Color = Color3.fromRGB(255), Time = 2})
+					self.Client.SendNotification:FireAll(`{players.Name} does not have {FloorName}`,{Color = Color3.fromRGB(255,0,0), Time = 2})
 					StopTheSearch = true
-					break;
 				end
 				
 				if StopTheSearch then
 					warn("We stopped the search and autopicked a planet")
-					--self.Client.Notification
 					Autopick()
 					break;
 				end
 			end
 		end
-
+		
 		mapWithmostPlayer = highestCountTableTex(playerHasMap)
 	else
 		Autopick()
 	end
 
-	warn("THIS IS WITH THE VOTES ACCOUNTED ---> ", highest)
-
+	warn("THIS IS WITH THE VOTES ACCOUNTED ---> ", highest, mapWithmostPlayer)
+	
+	--warn("THE NEW SORTED TABLE",)
+	
 	for mapName,info in pairs(playerHasMap) do
 		print("------ ", mapName , " ------")
 		for name, diff in pairs(info) do
@@ -1445,17 +1457,18 @@ function MatchService:GetPlayableMap()
 		return mapWithmostPlayer[LastMap]
 	end
 
-	
 	if typeof(mapWithmostPlayer) == "table" and #mapWithmostPlayer > 1 then
 		warn("THE MAPS ---> ", playerHasMap , mapWithmostPlayer)
 	
 		mapWithmostPlayer[1]["Room"] = "Room1"
 		return mapWithmostPlayer[1]
 	else -- if map shore is equal		
-		for _, Info in pairs(mapWithmostPlayer) do
+		
+		for i, Info in pairs(mapWithmostPlayer) do
 			print("THE INFO --> ", Info.Floor,Info.Difficulty)
 		end
 		
+
 		mapWithmostPlayer[1]["Room"] = "Room1"
 		return mapWithmostPlayer[1]
 	end
@@ -1691,7 +1704,8 @@ function MatchService:KnitStart()
 				
 				LatestVote[player.Name] = {
 					Room = Data.Room,
-					Floor = Data.Floor
+					Floor = Data.Floor,
+					Difficulty = Data.Difficulty
 				}
 			else
 				--------- fix this ---------
@@ -1708,18 +1722,11 @@ function MatchService:KnitStart()
 			end			
 		end
 		
-
-		
 		if VotesTest == 1 then
 			self.Client.Start:FireAll()	
 		end
-		-- GameService:GetVotes()
-		
-		if #game.Players:GetChildren() > 1 then
-			StartGame(nil,SkipAllVotes)
-		else
-			StartGame(Data,SkipAllVotes)
-		end
+	
+		StartGame(nil,SkipAllVotes)
 	end)
 
 	
