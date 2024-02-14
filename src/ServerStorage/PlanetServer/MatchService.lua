@@ -82,7 +82,7 @@ local Debug = false
 local IsDefending = workspace.IsDefending
 local DefaultWaitUntilNextWave = 5 -- seconds
 local lost_match = workspace.MatchLost
-local reviveId = 1754270344
+local reviveId = 1754721725
 
 
 -- local Difficulties_nr = {
@@ -516,16 +516,19 @@ function MatchService:GameEnded(Info)
 		self.Client.ReviveRequest:FireAll(true)
 
 		ReviveConnection = self.Client.ReviveRequest:Connect(function(sender,Answer)
-			HasResponed = false
-			EnteredReviveUI.Value += 1
+			
+			if Answer == "OnProgress" then
+				EnteredReviveUI.Value += 1
+			end
+			
 			if Answer then
 				print("[ THIS SHOULD BE FLAGGED AS A HACKER ]")
+				HasResponed = false
 				sender:Kick("You have been flagged as a hacker")
 			end
 		end)
 		
 		MarketplaceService.ProcessReceipt = function(receiptInfo)
-			-- print(receiptInfo)
 			local buyer = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 			if not buyer then
 				HasResponed = false
@@ -539,6 +542,7 @@ function MatchService:GameEnded(Info)
 				end
 
 				HasResponed = true
+				MarketplaceService.ProcessReceipt = nil
 			end
 		end
 
@@ -567,6 +571,7 @@ function MatchService:GameEnded(Info)
 			return "Continue"
 		else
 			GameIsPaused = false
+		 	MarketplaceService.ProcessReceipt = nil
 			self.Client.ReviveRequestAccepted:FireAll(false)
 			ReviveConnection:Disconnect()
 		end
@@ -937,11 +942,6 @@ function MatchService:StartGame(MapInfo)
 			CurrentWave.Value += 1
 		end
 		
-		if lost_match.Value and not GameIsPaused then
-			warn(" FAILED BECAUSE MATCH WAS LOST HERE ")
-			IsDefending.Value = false
-			break;
-		end
 		
 		if CurrentWave.Value > #Waves and not getBoss() then
 			warn(" FAILED BECAUSE THE WAVE IS GREATER THA NTHE LIMIT ")
@@ -949,8 +949,14 @@ function MatchService:StartGame(MapInfo)
 			break;
 		end
 		
+		if lost_match.Value and not GameIsPaused then
+			warn(" FAILED BECAUSE MATCH WAS LOST HERE ")
+			IsDefending.Value = false
+			break;
+		end
+
 		self:GiveMoney(Room_Difficulty.CashPerWave,Room_Difficulty)
-		
+
 		local _,err = pcall(function()
 			GameService:WaveCompleted()
 		end)
@@ -1543,6 +1549,10 @@ function MatchService.Client:GetPlayersFloors()
 	
 	local commonFloors = compareTables(AllFloors)
 	
+	if #AllFloors > 1 then
+		self.Server.Client.SendNotification:FireAll(`You can only pick a planet & act that everyone has`,{Color = Color3.fromRGB(255, 238, 0), Time = 5})
+	end
+
 	return commonFloors
 end
 

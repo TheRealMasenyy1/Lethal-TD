@@ -48,7 +48,7 @@ local autoSkip = false
 local IsDefending = false
 
 local MaxWave = 10
-local reviveId = 1754270344
+local reviveId = 1754721725
 
 function Skip(value)
 	SkipWave.Check_lb.Visible = value
@@ -95,8 +95,10 @@ function MatchController:StartGame()
 	
 	CurrentWave.Changed:Connect(function()
 		Wave.Visible = true	
-		self:Notify(`Wave {CurrentWave.Value} starting!`)
-		Wave.Text = "Wave: " .. CurrentWave.Value .. "/" .. MaxWave
+		if CurrentWave.Value > 0 and workspace.IsDefending.Value then
+			self:Notify(`Wave {CurrentWave.Value} starting!`)
+			Wave.Text = "Wave: " .. CurrentWave.Value .. "/" .. MaxWave			
+		end
 	end)
 
 	ShipHealth.Changed:Connect(function(Health)
@@ -396,6 +398,9 @@ function MatchController:OnDeath()
 
 	ReviveBtnCleaner:GiveTask(Yes_btn.Activated:Connect(function()
 		Responded = true
+
+		MatchService.ReviveRequest:Fire(nil,"OnProgress")	
+		
 		if EnteredReviveUI.Value <= 0 then
 			MarketplaceService:PromptProductPurchase(player,reviveId)
 		end
@@ -404,8 +409,11 @@ function MatchController:OnDeath()
 	ReviveBtnCleaner:GiveTask(No_btn.Activated:Connect(function()
 		OnDeathUI.Visible = false
 		OnDeathUI.Position = UDim2.new(0,0,1,0)
-		Responded = false		
-		MatchService.ReviveRequest:Fire(Responded)	
+		Responded = false	
+
+		if EnteredReviveUI.Value <= 0 then
+			MatchService.ReviveRequest:Fire(Responded)
+		end
 	end))
 
 	repeat
