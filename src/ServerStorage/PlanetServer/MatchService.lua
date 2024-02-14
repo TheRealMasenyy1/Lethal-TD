@@ -76,7 +76,7 @@ local DeadAttackers = 0
 
 local playerProfiles : profile = {}
 
-local canRestart = false
+local canRestart = true
 local Debug = false
 local IsDefending = workspace.IsDefending
 local DefaultWaitUntilNextWave = 5 -- seconds
@@ -480,7 +480,21 @@ function MatchService:GameEnded(Info)
 		end
 	end
 
-	if Info.result == "Lose" and canRestart then --- If player lose then ask if he wants to revive
+	local function GetUnitsCount()
+		local count = 0
+		local UnitsFolder =MatchFolder:FindFirstChild("Units")
+		if UnitsFolder then
+			for _ = 1, #UnitsFolder:GetChildren() do
+				count += 1			
+			end
+			
+			return count
+		end
+
+		return 0
+	end
+
+	if Info.result == "Lose" and GetUnitsCount() >= 1 and canRestart then --- Check if player has placed a  unit else If player lose then ask if he wants to revive
 		local ReviveConnection : RBXScriptConnection;
 		-- local dt_time = 0
 		local MaxWaitTime = 10
@@ -492,12 +506,17 @@ function MatchService:GameEnded(Info)
 		ReviveCountdown.Parent = workspace
 		ReviveCountdown.Value = MaxWaitTime
 
-		local player = game.Players:GetChildren()[1]	
-		self.Client.ReviveRequest:Fire(player,true)
+		--- This is so that only one player in a multiplayer lobby buys the gamePass
+		local EnteredReviveUI = Instance.new("IntValue")
+		EnteredReviveUI.Name = "EnteredReviveUI"
+		EnteredReviveUI.Parent = workspace
+		EnteredReviveUI.Value = 0
+
+		self.Client.ReviveRequest:FireAll(true)
 
 		ReviveConnection = self.Client.ReviveRequest:Connect(function(sender,Answer)
 			HasResponed = false
-			
+			EnteredReviveUI.Value += 1
 			if Answer then
 				print("[ THIS SHOULD BE FLAGGED AS A HACKER ]")
 				sender:Kick("You have been flagged as a hacker")
@@ -513,6 +532,11 @@ function MatchService:GameEnded(Info)
 			end
 
 			if receiptInfo.ProductId == reviveId then
+				
+				if #game.Players:GetChildren() > 1 then
+					self.Client.SendNotification:FireAll(`{buyer.Name} revived everyone`,{Color = Color3.fromRGB(238, 255, 0), Time = 2})
+				end
+
 				HasResponed = true
 			end
 		end
@@ -527,8 +551,8 @@ function MatchService:GameEnded(Info)
 			ClearTheMap()
 		until HasResponed ~= nil
 		
+		EnteredReviveUI:Destroy()
 		ReviveCountdown:Destroy()
-		print(" The Response was --> ", HasResponed)
 
 		if HasResponed then
 			ValueFolder.Health.Value = 100
@@ -537,12 +561,12 @@ function MatchService:GameEnded(Info)
 			RevivePlayer = true
 			GameIsPaused = false
 
-			self.Client.ReviveRequestAccepted:Fire(player,true)
+			self.Client.ReviveRequestAccepted:FireAll(true)
 			ReviveConnection:Disconnect()
 			return "Continue"
 		else
 			GameIsPaused = false
-			self.Client.ReviveRequestAccepted:Fire(player,false)
+			self.Client.ReviveRequestAccepted:FireAll(false)
 			ReviveConnection:Disconnect()
 		end
 	end
@@ -720,7 +744,8 @@ function MatchService:StartGame(MapInfo)
 	
 	GameService:SetMap(string.lower(CurrentFloor:GetAttribute("FloorName")))
 	lost_match.Value = false	
-	
+	Health.Value = 100
+
 	local GetPartsInShip = workspace:GetPartsInPart(Detector,overlapsForShip)
 	
 	for i, part in pairs(GetPartsInShip) do
@@ -1587,13 +1612,6 @@ function MatchService:KnitStart()
 		end
 		
 		if SkipAllVotes then
-			-- local FloorMap = {
-			-- 	Experimentation = 1;
-			-- 	Vow = 2,
-			-- 	Rend = 3,
-			-- 	Mansion = 4,
-			-- }
-
 			Data = self:GetPlayableMap() --results
 			warn("WE RETURNED THIS ----> ", Data)
 		end
@@ -1671,7 +1689,7 @@ function MatchService:KnitStart()
 				newFloors[3] = 1
 					warn("PLLAYER HAS JOINED THE GAME ---> ", value)
 				
-				ProfileService:Update(player, "Floors", function(Floors)
+				ProfileService:Update(player, "Floors", function()
 					warn("GAVE THE PlAYER --> ", player.Name ," AN EXTRA FLOOR",value, newFloors)
 					return newFloors
 				end)	
@@ -1751,7 +1769,7 @@ function MatchService:KnitStart()
 		repeat task.wait(.1) RequiredToStart = #game.Players:GetChildren() until WantsToRestart >= RequiredToStart
 
 		if WantsToRestart >= RequiredToStart and not CountDownOnGoing then
-			Restarted = true
+			canRestart = true
 			
 			WantsToRestart = 0
 			GameService:StartVoting()

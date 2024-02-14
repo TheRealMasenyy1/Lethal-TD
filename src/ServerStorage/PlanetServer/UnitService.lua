@@ -109,11 +109,9 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 				unitAmount[player.Name][Info.Name] += 1
 			end
 			
-			--warn("THE PLACEMENT AMOUNT TABLE ---> ", unitAmount , " --> ",  Units[newUnit.Name].MaxPlacement , " <---> ", unitAmount[player.Name][newUnit.Name] < Units[newUnit.Name].MaxPlacement)
 			task.spawn(function()
 				Unit:Run()
-			end)
-			
+			end)	
 
 		else
 			warn("[ CLASS ] - CLASS WAS NOT FOUND...", Units[Info.Name].Name)
@@ -121,13 +119,13 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 	end
 end
 
-function UnitService.Client:GetUnitInfo(player,UnitId)
+function UnitService.Client:GetUnitInfo(_,UnitId)
 	return self.Server.Units[UnitId]
 end
 
-function UnitService.Client:ChangeTargeting(player,UnitId)
+function UnitService.Client:ChangeTargeting(_,UnitId)
 	local Unit = self.Server.Units[UnitId]
-	local TargetingChanged = Unit:ChangeTargeting()
+	Unit:ChangeTargeting()
 end
 
 function UnitService.Client:Sell(player,UnitId)
@@ -201,7 +199,6 @@ function UnitService:KnitStart()
 		local Cash = player:FindFirstChild("Cash") -- InGame Money For Units and Upgrade
 		local PlacementAmount = player:FindFirstChild("PlacementAmount")
 		local Price;
-		--warn("WE HAVE RECIEVED THE SIGNAL")
 		MatchFolder = workspace.Floors[Data.Floor][Data.Room]
 		
 		if not Room then
@@ -218,7 +215,7 @@ function UnitService:KnitStart()
 		
 		local Params = RaycastParams.new()
 		Params.FilterType = Enum.RaycastFilterType.Include
-		Params.FilterDescendantsInstances = { Room.Path }
+		Params.FilterDescendantsInstances = { Room.Path,Room.Units }
 		
 		if Price and playerUnits[player.Name][Data.Name] and Cash.Value >= Price and PlacementAmount.Value < MatchFolder:GetAttribute("MaxPlacement") and
 			(not unitAmount[player.Name][Data.Name] 

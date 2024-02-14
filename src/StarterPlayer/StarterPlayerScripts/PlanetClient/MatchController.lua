@@ -374,6 +374,7 @@ function MatchController:OnDeath()
 	local Yes_btn = RespawnUI:WaitForChild("Yes")
 	local No_btn = RespawnUI:WaitForChild("No")
 	local ReviveCountdown = workspace:WaitForChild("ReviveCountdown")
+	local EnteredReviveUI = workspace:WaitForChild("EnteredReviveUI")
 
 	local ReviveBtnCleaner = Maid.new()
 	local Responded = nil
@@ -395,8 +396,9 @@ function MatchController:OnDeath()
 
 	ReviveBtnCleaner:GiveTask(Yes_btn.Activated:Connect(function()
 		Responded = true
-		-- OnDeathUI.Position = UDim2.new(0,0,1,0)
-		MarketplaceService:PromptProductPurchase(player,reviveId)
+		if EnteredReviveUI.Value <= 0 then
+			MarketplaceService:PromptProductPurchase(player,reviveId)
+		end
 	end))
 	
 	ReviveBtnCleaner:GiveTask(No_btn.Activated:Connect(function()
