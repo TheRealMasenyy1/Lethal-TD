@@ -32,7 +32,7 @@ local SkipWave = Content:WaitForChild("SkipWave")
 local VoteSkip = SkipWave:WaitForChild("VoteSkip")
 local BaseHealthUI = Content:WaitForChild("BaseHealth")
 local Notify_lb = Content:WaitForChild("Notify")
-local NotifyFrame = Content:WaitForChild("NotifyFrame")
+local NotifyFrame = Core:WaitForChild("NotifyFrame")
 
 local OnDeathUI = Core:WaitForChild("OnDeath") 
 

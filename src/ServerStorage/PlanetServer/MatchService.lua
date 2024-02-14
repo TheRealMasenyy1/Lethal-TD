@@ -62,7 +62,8 @@ local MatchService = Knit.CreateService {
 		SendToLobby = Knit.CreateSignal(),
 		SendNotification = Knit.CreateSignal(),
 		ReviveRequest = Knit.CreateSignal(),
-		ReviveRequestAccepted = Knit.CreateSignal()
+		ReviveRequestAccepted = Knit.CreateSignal(),
+		GetPlayersFloors = Knit.CreateSignal()
 	}
 }
 
@@ -1442,13 +1443,16 @@ function MatchService:GetPlayableMap()
 				
 				if StopTheSearch then
 					warn("We stopped the search and autopicked a planet")
-					Autopick()
 					break;
 				end
 			end
 		end
 		
 		mapWithmostPlayer = highestCountTableTex(playerHasMap)
+
+		if typeof(mapWithmostPlayer) == "string" then
+			Autopick()
+		end
 	else
 		Autopick()
 	end
@@ -1483,21 +1487,67 @@ function MatchService:GetPlayableMap()
 	end
 
 	if typeof(mapWithmostPlayer) == "table" and #mapWithmostPlayer > 1 then
-		warn("THE MAPS ---> ", playerHasMap , mapWithmostPlayer)
+		-- warn("THE MAPS ---> ", playerHasMap , mapWithmostPlayer)
 	
 		mapWithmostPlayer[1]["Room"] = "Room1"
 		return mapWithmostPlayer[1]
 	else -- if map shore is equal		
 		
-		for i, Info in pairs(mapWithmostPlayer) do
+		for _, Info in pairs(mapWithmostPlayer) do
 			print("THE INFO --> ", Info.Floor,Info.Difficulty)
 		end
 		
-
 		mapWithmostPlayer[1]["Room"] = "Room1"
 		return mapWithmostPlayer[1]
 	end
 end
+
+function compareTables(inputTables)
+	local commonValues = {}
+
+	warn(inputTables,inputTables[1])
+
+	for key, value in pairs(inputTables[1]) do
+		local minValue = value 
+
+		local isCommonValue = true
+		for i = 2, #inputTables do
+			warn("WE COMPARING")
+			local currentValue = inputTables[i][key]
+			if not currentValue or currentValue ~= value then
+				isCommonValue = false
+				break
+			end
+			if currentValue < minValue then
+				minValue = currentValue
+			end
+		end
+
+		if isCommonValue then
+			table.insert(commonValues, minValue)
+		end
+	end
+
+	return commonValues
+end
+
+function MatchService.Client:GetPlayersFloors()
+	local ProfileService = Knit.GetService("ProfileService")
+	local AllFloors = {}
+
+	for _,player in pairs(game.Players:GetPlayers()) do
+		ProfileService:OnProfileReady(player):await()
+		local PlayerFloors = ProfileService:Get(player,"Floors")
+		table.insert(AllFloors,PlayerFloors)	
+	end 
+	
+	local commonFloors = compareTables(AllFloors)
+	
+	return commonFloors
+end
+
+
+
 
 function MatchService:KnitStart()
 	local RequiredToStart = #game.Players:GetChildren()
@@ -1533,33 +1583,6 @@ function MatchService:KnitStart()
 	
 	GameService:StartVoting()
 	
-	local function GetVotes(Data,Voted) : boolean
-		
-		if Data ~= nil then
-			local Floor = Data.Floor
-			local Room = Data.Room
-			local passes = 0 -- Need to be same or more than the requiredToStart
-
-			for name,votes in pairs(Voted) do
-				if name == Floor and votes >= RequiredToStart then
-					passes += 1
-				end
-
-				if name == Room and votes >= RequiredToStart then
-					passes += 1
-				end
-			end
-
-			if passes >= RequiredToStart then
-				return true
-			else
-				return false
-			end
-		else
-			return false
-		end
-	end
-
 	local function startMatchcooldown()
 		task.spawn(function() -- this is for the match cooldown
 			repeat task.wait(.1) until #game.Players:GetChildren() >= 1
@@ -1570,8 +1593,12 @@ function MatchService:KnitStart()
 				--warn("THE LOOP IS ON ---> ", MatchStartCountDown.Value)
 				MatchStartCountDown.Value -= RunService.Heartbeat:Wait()
 				--Start += t	
-				if MatchStartCountDown.Value <= 0 then
 
+				-- if MapStarted then
+				-- 	break;
+				-- end
+
+				if MatchStartCountDown.Value <= 0 then
 					if not IsDefending.Value then
 						--- Start -- This is for if the count down ends before player votes
 						local ValueToStart = workspace:FindFirstChild("VoteToStartGame")
@@ -1594,6 +1621,7 @@ function MatchService:KnitStart()
 	end
 	
 	local function StartGame(Data, SkipAllVotes)
+		local FindVotes = workspace:FindFirstChild("MapVotes")
 		local DifficultiesToNumber = {
 			["Easy"] = 1,
 			["Medium"] = 2,
@@ -1603,20 +1631,13 @@ function MatchService:KnitStart()
 			-- Add one more
 		}
 		
-		if #game.Players:GetChildren() > 1 then
-			local FindVotes = workspace:FindFirstChild("Votes")
-			if FindVotes then
-				FindVotes.Value = 0
-				SkippedSaved = {}
-			end
+		if workspace:FindFirstChild("Votes") then
+			workspace.Votes.Value = 0
+			SkippedSaved = {}
 		end
 		
-		if SkipAllVotes then
+		if ((FindVotes and FindVotes.Value >= #game.Players:GetChildren()) or SkipAllVotes) and not MapStarted then
 			Data = self:GetPlayableMap() --results
-			warn("WE RETURNED THIS ----> ", Data)
-		end
-
-		if (GetVotes(Data,Voted) or SkipAllVotes) and not MapStarted then
 			MapInfo = Data
 			
 			--- Teleport to the floor			
@@ -1625,8 +1646,7 @@ function MatchService:KnitStart()
 				VoteToStartGame.Parent = workspace
 				VoteToStartGame.Name = "VoteToStartGame"
 			end
-			
-			--warn("THE INFO ---> ", DifficultiesToNumber[Data.Difficulty],Data.Difficulty)
+		
 			self.Client.SendNotification:FireAll(`| Planet {string.match(Data.Floor,"%d+")} | Act {DifficultiesToNumber[Data.Difficulty]} |`,{Color = Color3.fromRGB(0, 208, 255), Time = 5})
 
 			MapStarted = true
@@ -1647,6 +1667,10 @@ function MatchService:KnitStart()
 				CountDownOnGoing = true
 				while Countdown_value.Value > 0 and not IsDefending.Value do
 					Countdown_value.Value -= RunService.Heartbeat:Wait()
+					
+					if MapStarted then
+						break;
+					end
 
 					--print("COUNT DOWN UNTIL THE FIRST MAPS GETS LOADED")
 					if Countdown_value.Value <= 0 then
@@ -1679,8 +1703,6 @@ function MatchService:KnitStart()
 		PlacementAmount.Parent = player
 		
 		playerProfiles[player.Name].Money = StartingCash
-		
-		-- local CurrentPlayerData = ProfileService:Get(player,"Floors")
 
 		-- This is a fix for the player that has Floor 2 >= 3
 		ProfileService:OnProfileReady(player):andThen(function(value)
@@ -1704,21 +1726,29 @@ function MatchService:KnitStart()
 	local VotesTest = 0
 
 	self.Client.Play:Connect(function(player,Data : FloorInfo,SkipAllVotes) -- This is for starting the actual match
+		local FindVotes = workspace:FindFirstChild("MapVotes")
 		RequiredToStart = #game.Players:GetChildren()
 		
+		warn("THIS FIRED THANKS TO THE CLIENT", FindVotes)
+		
+		if FindVotes and not LatestVote[player.Name] then
+			print("WE FOUDN THE VALUE BUT NOTHING IS HAPPENING")
+			FindVotes.Value += 1
+			print(FindVotes.Value)
+		end
+
 		if not SkipAllVotes then
 			if Voted[Data.Floor] and Voted[Data.Room] then
-				if LatestVote[player.Name] then
-					local latestFloor = LatestVote[player.Name].Floor
-					local latestRoom = LatestVote[player.Name].Room
-					-- local latestDifficulty = LatestVote[player.Name].Difficulty
+				-- if LatestVote[player.Name] then
+				-- 	local latestFloor = LatestVote[player.Name].Floor
+				-- 	local latestDifficulty = LatestVote[player.Name].Difficulty
 					
-					Voted[latestFloor] -= 1
-					Voted[latestRoom] -= 1
-				end
+				-- 	Voted[latestFloor] -= 1
+				-- 	Voted[latestDifficulty] -= 1
+				-- end
 				
-				Voted[Data.Floor] += 1
-				Voted[Data.Room] += 1
+				-- Voted[Data.Floor] += 1
+				-- Voted[Data.Difficulty] += 1
 				
 				LatestVote[player.Name] = {
 					Room = Data.Room,
@@ -1727,8 +1757,8 @@ function MatchService:KnitStart()
 				}
 			else
 				--------- fix this ---------
-				Voted[Data.Floor] = 1
-				Voted[Data.Room] = 1
+				-- Voted[Data.Floor] = 1
+				-- Voted[Data.Difficulty] = 1
 				
 				LatestVote[player.Name] = {
 					Room = Data.Room,
@@ -1742,15 +1772,16 @@ function MatchService:KnitStart()
 		
 		if VotesTest == 1 then
 			self.Client.Start:FireAll()	
-		end
+		end		
 	
-		StartGame(nil,SkipAllVotes)
+		StartGame(nil,false)
 	end)
 
 	
 	self.Client.Restart:Connect(function(player) -- When a player wants to restart the game
 		local ValueToStart = workspace:FindFirstChild("VoteToStartGame")
 		local Votes = workspace:FindFirstChild("Votes")
+		local MapVotes = workspace:FindFirstChild("MapVotes")
 		RequiredToStart = #game.Players:GetChildren()
 		
 		if not VotedToRestart[player.Name] then
@@ -1758,6 +1789,10 @@ function MatchService:KnitStart()
 			VotedToRestart[player.Name] = true
 		end
 		
+		if MapVotes then
+			MapVotes.Value = 0
+		end
+
 		if Votes then
 			Votes.Value = 0
 		end

@@ -29,7 +29,7 @@ local ActionFrame = Content:WaitForChild("Actions")
 local UpgradeUI : Frame = Content:WaitForChild("Upgrade")
 local ToolbarUI = Content:WaitForChild("ToolbarUI")
 local Notify_lb = Content:WaitForChild("Notify")
-local NotifyFrame = Content:WaitForChild("NotifyFrame")
+local NotifyFrame = Core:WaitForChild("NotifyFrame")
 local Inputs = Core:WaitForChild("Inputs")
 
 local Floors = workspace.Floors
