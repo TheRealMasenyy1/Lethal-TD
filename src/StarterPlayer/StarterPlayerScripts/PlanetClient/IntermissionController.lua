@@ -13,13 +13,10 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Shortcut = require(ReplicatedStorage.Shortcut)
 local Maid = require(ReplicatedStorage.maid)
 
-local Asset = ReplicatedStorage.Assets
 local Viewports = SharedPackages.Viewports
-local MapMaid 
 
 local Core = player.PlayerGui:WaitForChild("Core")
 local Content = Core:WaitForChild("Content")
-local ToolbarUI = Content:WaitForChild("ToolbarUI")
 local IntermissionFrame = Core:WaitForChild("Intermission")
 local InterMissionUI = IntermissionFrame:WaitForChild("Content")
 local FloorInfoUI = InterMissionUI:WaitForChild("FloorInfo")
@@ -31,11 +28,12 @@ local ViewportLocationForDifficulties = {}
 
 
 local Floors_Folder = workspace.Floors
-local ExtraUI = Core.ExtraUI
 local CheckForUpdate = false
 local AlreadyVoted = false
 
 local maid = Maid.new()
+local MapMaid = nil;
+
 local DefaultFloor = 1
 local Selected = {
 	Floor = "Floor1", 
@@ -60,7 +58,7 @@ end
 function IntermissionController:GetFloors()
 	local Floors = {}
 	
-	for i, floor in pairs(Floors_Folder:GetChildren()) do
+	for _, floor in pairs(Floors_Folder:GetChildren()) do
 		Floors[floor.Name] = {}
 		for _, room in pairs(floor:GetChildren()) do
 			table.insert(Floors[floor.Name],room.Name)
@@ -87,7 +85,7 @@ function IntermissionController:ClearRoomFrame()
 	end
 end
 
-function IntermissionController:ShowRooms(Info,currentFloor,FloorData,RoomsInFloor,FloorName)
+function IntermissionController:ShowRooms(_,currentFloor,FloorData,RoomsInFloor,_)
 	local Rooms = {}
 	local MainFrame = RoomsFrame.Frame
 	local temp = MainFrame.Temp
@@ -97,7 +95,7 @@ function IntermissionController:ShowRooms(Info,currentFloor,FloorData,RoomsInFlo
 	self:ClearRoomFrame()
 	local Result = {
 		Unlocked = Color3.fromRGB(85, 255, 255),
-		Locked = Color3.fromRGB(255)
+		Locked = Color3.fromRGB(255,0,0)
 	}
 
 	local Difficulties = {
@@ -181,11 +179,9 @@ function IntermissionController:ShowRooms(Info,currentFloor,FloorData,RoomsInFlo
 end
 
 function IntermissionController:CreateViewport()
-	local Viewports = {}
+	local ViewportsHolder = {}
 	local ViewportsForRooms = {}
 	local function create(Targetplayer)
-		local Players = game:GetService("Players")
-
 		-- Function to get the headshot URL of a player
 		local function getHeadshotUrl(plr)
 			return "https://www.roblox.com/headshot-thumbnail/image?userId=" .. plr.UserId .. "&width=420&height=420&format=png"
@@ -205,23 +201,22 @@ function IntermissionController:CreateViewport()
 	end
 
 	for _, Targetplayer in pairs(game.Players:GetChildren()) do
-		local Viewport = create(Targetplayer)
-		Viewports[Targetplayer.Name] = Viewport
-		ViewportsForRooms[Targetplayer.Name] = Viewport:Clone()
+		local ViewportForPlayer = create(Targetplayer)
+		ViewportsHolder[Targetplayer.Name] = ViewportForPlayer 
+		ViewportsForRooms[Targetplayer.Name] = ViewportForPlayer:Clone()
 	end
 
 	-- Create a ViewportFrame
-	return Viewports,ViewportsForRooms
+	return ViewportsHolder,ViewportsForRooms
 end
 
 function IntermissionController:ApplyVoteImage(playerViewport : ViewportFrame, Data)
 	local RoomHolder = RoomsFrame.Frame
 	local FloorBtn = FloorDisplay:FindFirstChild(Data.Floor)
-	local RoomBtn = RoomHolder:FindFirstChild(Data.Room)
 	-- The Floor Holder --> FloorDisplay
 	if not playerViewport then return end
 	
-	local function getEmptySlot(Btn,Type : string)
+	local function getEmptySlot(Btn,_)
 		for i = 1, 4 do
 			local Frame = Btn[i]
 			local Viewport = Frame:FindFirstChildWhichIsA("ViewportFrame")
@@ -237,7 +232,6 @@ function IntermissionController:ApplyVoteImage(playerViewport : ViewportFrame, D
 	if FloorBtn then
 		local IsEmpty,Frame = getEmptySlot(FloorBtn,"Floor")
 		
-		--warn("Parenting to ---> ",playerViewport , playerViewport:IsDescendantOf(FloorBtn))
 		if IsEmpty and playerViewport then
 			playerViewport.Parent = Frame
 			ViewportLocation[playerViewport.Name] = Frame.Parent
@@ -261,9 +255,7 @@ function IntermissionController:ApplyVoteImageForRooms(playerViewport : Viewport
 	
 	local RoomBtn = RoomHolder:FindFirstChild("Room" .. Difficulties[Data.Difficulty])
 	
-	--ViewportLocation[playerViewport.Name] = {Floor = ""; Room = "";}
-	-- The Floor Holder --> FloorDisplay
-	local function getEmptySlot(Btn,Type : string)
+	local function getEmptySlot(Btn,_)
 		for i = 1, 4 do
 			local Frame = Btn[i]
 			local Viewport = Frame:FindFirstChildWhichIsA("ViewportFrame")
@@ -292,15 +284,12 @@ function IntermissionController:StartInter(ChapterData)
 	local StartGame_btn = RoomsFrame:WaitForChild("Play")
 	local VoteLabel = RoomsFrame:WaitForChild("VoteLabel")
 	local Countdown = RoomsFrame:WaitForChild("Countdown")
-	local DifficultyFrame = RoomsFrame:WaitForChild("Difficulty")
-	local Difficulty_Incr = DifficultyFrame:WaitForChild("Increase")
-	local Difficulty_Decr = DifficultyFrame:WaitForChild("Decrease")
-	local Difficulty_lb = DifficultyFrame:WaitForChild("DifficultyLabel")
+	
 	local StartGameFrame = Content:WaitForChild("StartGame")
 	local GameService = Knit.GetService("GameService")
 
 	local ChapterInfo = MatchService:ChapterInfo()
-	local CurrentDifficulties = 1
+	
 	local playerviewports,playerViewportForRooms
 	local Difficulties = {
 		["Easy"] = 1,
@@ -470,7 +459,7 @@ function IntermissionController:StartInter(ChapterData)
 
 		local Result = {
 			Unlocked = Color3.fromRGB(26, 255, 0),
-			Locked = Color3.fromRGB(255)
+			Locked = Color3.fromRGB(255,0,0)
 		}
 		
 		
@@ -512,34 +501,28 @@ function IntermissionController:StartInter(ChapterData)
 
 		local inputTable2 = {
 			[1] = 2,
-			[2] = 4,
-			[3] = 5,
-			[4] = 6
 		}
 
-		local commonValues = compareTables(inputTable1, inputTable2)
+		local inputTable3 = {
+			[1] = 2,
+			[2] = 1
+		}
+
+		local commonValues = compareTables(inputTable1, inputTable2,inputTable3)
 		
 		print(commonValues)
 		
 		--]]
 		
-
-		
+	
 		ProfileService:OnProfileReady():andThen(function()
-			local FloorsCompleted = ProfileService:Get("Floors")
-			--- if the player count is greater than 1 then only show the maps that everyone has
-			
-			
-			FloorsCompleted:andThen(function(FloorData)
-				warn("[ FLOORS ] -->> ", FloorData) -- , #FloorData
-				if (FloorData == nil) or (FloorData and #FloorData <= 0) then
-					player:Kick("You need to rejoin due to your data being incorrect")
-				end
-								
+			ProfileService:OnProfileReady():await()
+			MatchService:GetPlayersFloors():andThen(function(FloorData)
+				print("PLAYER HAS LOADED HERE IS THE COMMONFLOORS ---> ",FloorData)
+
 				self:ClearFloorFrame()
 				
 				for currentFloor = 1,#Floors_Folder:GetChildren() do
-					local AmountValue = #FloorData
 					local Name = "Floor"..currentFloor
 					local temp = FloorDisplay.Temp
 					local Unlocked = false
@@ -584,8 +567,65 @@ function IntermissionController:StartInter(ChapterData)
 						end
 					end))
 				end
-				
+	
 			end)
+			
+			-- FloorsCompleted:andThen(function(FloorData)
+			-- 	warn("[ FLOORS ] -->> ", FloorData) -- , #FloorData
+			-- 	if (FloorData == nil) or (FloorData and #FloorData <= 0) then
+			-- 		player:Kick("You need to rejoin due to your data being incorrect")
+			-- 	end
+			
+			-- 	self:ClearFloorFrame()
+				
+			-- 	for currentFloor = 1,#Floors_Folder:GetChildren() do
+			-- 		local AmountValue = #FloorData
+			-- 		local Name = "Floor"..currentFloor
+			-- 		local temp = FloorDisplay.Temp
+			-- 		local Unlocked = false
+
+			-- 		local newfloorbtn = temp.Floorbtn:Clone()
+			-- 		newfloorbtn.Nr.Text = currentFloor
+			-- 		newfloorbtn.Parent = FloorDisplay
+			-- 		newfloorbtn.Name = "Floor"..currentFloor
+			-- 		newfloorbtn.Visible = true
+
+			-- 		if currentFloor > (#FloorData) then
+			-- 			newfloorbtn.BackgroundColor3 = Result["Locked"]
+			-- 			newfloorbtn.UIStroke.Color = Result["Locked"]	
+			-- 		else
+			-- 			newfloorbtn.BackgroundColor3 = Result["Unlocked"]
+			-- 			newfloorbtn.UIStroke.Color = Result["Unlocked"]
+			-- 			Unlocked = true
+			-- 		end
+
+			-- 		if not Unlocked then
+			-- 			maid:GiveTask(newfloorbtn.Activated:Connect(function()
+			-- 				Shortcut:PlaySound("MouseClick")
+
+			-- 				local selectedFloor = SelectFloor(Name)
+			-- 				if UserInputService.GamepadEnabled then
+			-- 					GuiService:Select(selectedFloor[1].Parent)
+			-- 				end
+			-- 			end))					
+			-- 		end
+
+			-- 		maid:GiveTask(newfloorbtn.Activated:Connect(function()
+			-- 			Shortcut:PlaySound("MouseClick")
+
+			-- 			if not Unlocked then
+			-- 				StartGame_btn.Visible = false
+			-- 				VoteLabel.Visible = false
+			-- 				SelectFloor(Name,currentFloor,FloorData)
+			-- 			else
+			-- 				StartGame_btn.Visible = true
+			-- 				VoteLabel.Visible = true
+			-- 				SelectFloor(Name,currentFloor,FloorData)
+			-- 			end
+			-- 		end))
+			-- 	end
+
+			-- end)
 		end)
 		
 		-- CountDown until it starts
