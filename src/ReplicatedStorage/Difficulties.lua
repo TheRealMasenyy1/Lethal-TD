@@ -4,7 +4,15 @@ local difficulties = {}
 local function getPropertyValue(parent, name)
 	local object = parent:FindFirstChild(name)
 	if object ~= nil then
-		return object.Value
+		if object:IsA("Folder") then
+			local alltheitems = {}
+			for _,items in pairs(object:GetChildren()) do
+				table.insert(alltheitems,{Name = items.Name, Percentage = items.Value})
+			end
+			return alltheitems
+		else
+			return object.Value
+		end
 	end
 end
 
@@ -82,7 +90,7 @@ local function convertDifficulty(difficulty)
 	local difficultyCompletionReward = getPropertyValue(completionRewards, "Difficulty")
 	local waveCompletionReward = getPropertyValue(completionRewards, "Wave")
 	local expCompletionReward = getPropertyValue(completionRewards, "Exp")
-
+	local extraRewards = getPropertyValue(completionRewards,"ChanceToGet")
 	--local cashfailedrewards = getPropertyValue(failedRewards,"Cash")
 	--local Expfailedrewards = getPropertyValue(failedRewards,"Exp")
 	
@@ -113,6 +121,7 @@ local function convertDifficulty(difficulty)
 			Difficulty = difficultyCompletionReward,
 			Wave = waveCompletionReward,
 			Exp = expCompletionReward,
+			ChanceToGet = extraRewards,
 		},
 		Waves = wavesOutput
 	}

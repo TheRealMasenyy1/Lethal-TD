@@ -21,7 +21,7 @@ function UnitManager.new(Unit)
 	self.Name = Unit.Name
 	self.Owner = nil
 	self.Upgrades = DefaultStats.Upgrades
-	self.Moneyspent = DefaultStats.Price -- The money spent on this unit
+	self.Moneyspent = DefaultStats.Price * .5 -- The money spent on this unit
 	self.Level = 0
 	self.Range = self.Upgrades[self.Level].Range;
 	self.Cooldown = self.Upgrades[self.Level].Cooldown;

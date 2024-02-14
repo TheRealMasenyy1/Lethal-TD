@@ -1,9 +1,8 @@
 --- CONTROLLS THE THE GAME WHEN THE PLAYER HAS JOINED ---
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
 local TweenService = game:GetService("TweenService")
-local TeleportService = game:GetService("TeleportService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local player = game:GetService("Players").LocalPlayer
 
 local SharedPackage = ReplicatedStorage.SharedPackage
@@ -47,8 +46,9 @@ local CurrentWave = workspace.CurrentWave
 local SkipBtnLoaded = false
 local autoSkip = false
 local IsDefending = false
-local MaxWave = 10
 
+local MaxWave = 10
+local reviveId = 1754270344
 
 function Skip(value)
 	SkipWave.Check_lb.Visible = value
@@ -370,8 +370,10 @@ end
 function MatchController:OnDeath()
 	local OnDeathContent = OnDeathUI:WaitForChild("Content")
 	local RespawnUI = OnDeathContent:WaitForChild("Respawn")
+	local Countdown = RespawnUI:WaitForChild("Countdown")
 	local Yes_btn = RespawnUI:WaitForChild("Yes")
 	local No_btn = RespawnUI:WaitForChild("No")
+	local ReviveCountdown = workspace:WaitForChild("ReviveCountdown")
 
 	local ReviveBtnCleaner = Maid.new()
 	local Responded = nil
@@ -379,20 +381,24 @@ function MatchController:OnDeath()
 		Position = UDim2.new(0,0,0,0)
 	}
 
+	Countdown.Text = ReviveCountdown.Value
+
 	OnDeathUI.Visible = true
 	Content.Visible = false
-
+	
 	local Tween = TweenService:Create(OnDeathUI,TweenInfo.new(1),TweenProp)  
 	Tween:Play()
+	
+	ReviveCountdown.Changed:Connect(function()
+		Countdown.Text = string.format("%.2f",ReviveCountdown.Value)
+	end)
 
 	ReviveBtnCleaner:GiveTask(Yes_btn.Activated:Connect(function()
 		Responded = true
-		OnDeathUI.Position = UDim2.new(0,0,1,0)
-		OnDeathUI.Visible = false
-		--- Send request to server to buy dev product 
-		MatchService.ReviveRequest:Fire(Responded)	
+		-- OnDeathUI.Position = UDim2.new(0,0,1,0)
+		MarketplaceService:PromptProductPurchase(player,reviveId)
 	end))
-
+	
 	ReviveBtnCleaner:GiveTask(No_btn.Activated:Connect(function()
 		OnDeathUI.Visible = false
 		OnDeathUI.Position = UDim2.new(0,0,1,0)
@@ -400,15 +406,12 @@ function MatchController:OnDeath()
 		MatchService.ReviveRequest:Fire(Responded)	
 	end))
 
-	--- Somewhere here, turn the Content to true
-
 	repeat
 		task.wait(.1)
 	until Responded ~= nil 
 
 	return Responded
 end
-
 
 function MatchController:KnitStart()
 	MatchService = Knit.GetService("MatchService")
@@ -435,7 +438,7 @@ function MatchController:KnitStart()
 	end)
 
 	MatchService.ReviveRequestAccepted:Connect(function(Accpted : boolean)
-		Accpted = Accpted or true
+		-- Accpted = Accpted or true
 		if Accpted then
 			OnDeath(Accpted)
 			Content.Visible = true
@@ -463,7 +466,6 @@ function MatchController:KnitStart()
 	end)
 	
 	MatchService.ReviveRequest:Connect(function()
-	
 		self:OnDeath()
 	end) 
 
