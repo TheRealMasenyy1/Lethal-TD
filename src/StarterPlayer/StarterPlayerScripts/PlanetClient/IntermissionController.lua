@@ -416,7 +416,7 @@ function IntermissionController:StartInter(ChapterData)
 				GuiService.SelectedObject = nil
 				AlreadyVoted = true
 				
-				-- GameService:Vote(Selected.Floor, Difficulties[Selected.Difficulty])
+				GameService:Vote(Selected.Floor, Difficulties[Selected.Difficulty])
 				MatchService.Play:Fire(Selected)
 				VoteLabel.Text =  "0/" .. #game.Players:GetChildren()
 			end

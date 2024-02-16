@@ -33,7 +33,7 @@ local AllowPlacement = workspace.AllowPlacement
 local Skipped = workspace.Skip
 local CurrentWave = workspace.CurrentWave
 local ValueFolder = workspace.Values
-local StartingHealth = 10
+local MapautoPicked = false
 local GameIsPaused = false
 local RevivePlayer = false --- This is true when the game starts, but then becomes false if the offer to revive gets decline
 local SkippedSaved = {}
@@ -83,12 +83,6 @@ local IsDefending = workspace.IsDefending
 local DefaultWaitUntilNextWave = 5 -- seconds
 local lost_match = workspace.MatchLost
 local reviveId = 1754721725
-
-
-local TempPlanets = {
-	[1] = 2,
-}
-
 
 
 -- local Difficulties_nr = {
@@ -446,20 +440,6 @@ function MatchService:FindRoomOrFloor(Data,ToFind)
 	return false
 end
 
-function MatchService:GetEntities()
-	local EntityList = {}
-
-	for _, Entity in pairs(Entities:GetChildren()) do
-		local HealthGui = Entity:FindFirstChild("HealthGui") -- Just to make sure
-
-		if HealthGui then
-			table.insert(EntityList,Entity.Name)
-		end
-	end
-
-	return EntityList
-end
-
 function MatchService:SelectItemByPercentage(items)
     local totalPercentage = 0
     for _, item in ipairs(items) do
@@ -503,9 +483,7 @@ function MatchService:GameEnded(Info)
 	local ClearFoldersForRevive = {
 		"Entities"
 	}
-
-	print("MATCH ENDED HERE IS THE INFO ---> ", Info)
-
+	
 	local function ClearTheMap()
 		for i = 1, #ClearFoldersForRevive do
 			local Folder = MatchFolder:FindFirstChild(ClearFoldersForRevive[i])
@@ -738,64 +716,6 @@ function MatchService:GetFloorAndRoom(MapInfo)
 	return tonumber(nrFloor), tonumber(nrRoom)
 end
 
-
-function MatchService:GenerateWave(EntityList, CurrentWave : IntValue & number, Room_Difficulty, Spawns : number)
-
-	local function Variety(MaxVariety : number)
-		local VarietyAmount = math.random(1,MaxVariety)
-		local totalAmount = #EntityList
-		local Choosen = 0
-		local List = {}
-
-		-- add could down for each Entity
-
-		for Priority = 1, VarietyAmount do
-			List[EntityList[math.random(1,totalAmount)]] = Priority
-		end
-
-		return List,VarietyAmount
-	end
-
-	local WaveList,MaxVarieties = Variety(Room_Difficulty.MaxVariety) -- the number should be a value from the Map Data
-	local Wave = {}
-	local Locations = {
-		[1] = "Start",
-		[2] = "Start1",
-		[3] = "Start2",
-
-	}
-
-	-- Add boss every 10 round
-	if CurrentWave % 10 == 0 then
-		table.insert(Wave,{
-			Amount = 1,
-			Direction = "",
-			Enemy = "Tank",
-			HP = 1000 * CurrentWave,
-			Priority = 1.05, -- Boss should always be last
-			Speed = 4,
-			IsBoss = true,
-		})
-	end
-
-	for Entity,Priority in pairs(WaveList) do
-		local Preset : EntityPreset = {
-			Amount = math.ceil((5 + Room_Difficulty.IncrementPerWave) / MaxVarieties);
-			Enemy = Entity;
-			HP = StartingHealth * 1.12; -- Should be a value from the Map Data
-			Speed = 5; -- Should be a value from the Map Data
-			Priority = Priority;
-			SpawnLocation = if Spawns and Spawns > 1 then Locations[math.random(1,Spawns)] else "Start"
-		};
-
-		table.insert(Wave,Preset)
-	end
-
-	StartingHealth = math.ceil(StartingHealth * 1.12) -- Save health
-	--warn("[ GENERATED WAVE ]: ",Wave)
-	
-	return Wave
-end
 function MatchService:StartGame(MapInfo)
 	if WaveIsRunning then return end
 	
@@ -810,9 +730,6 @@ function MatchService:StartGame(MapInfo)
 	local Nodes = self:GetNodes(Room)
 	local Health = ValueFolder.Health
 	local dmg = 10 -- Temp
-	
-	local EntitiesList = self:GetEntities()-- Gets the list of all the monsters in endless mode
-	local LeaderboardService = Knit.GetService("LeaderboardService")
 	local Room_Difficulty = Difficulties[CurrentFloor:GetAttribute("FloorName")][MapInfo.Difficulty]
 	local Waves = Room_Difficulty["Waves"]
 	local Attackers = 1
@@ -835,6 +752,7 @@ function MatchService:StartGame(MapInfo)
 	-----------------
 	
 	MatchFolder:SetAttribute("MaxPlacement", Room_Difficulty.MaxPlacement)
+	self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = #Waves})
 	AllowPlacement.Value = true
 	--warn("TELLING THE AMOUNT OF PLAYERS ---> ", players)
 	
@@ -948,6 +866,17 @@ function MatchService:StartGame(MapInfo)
 		self.Client.SkipWave:Connect(playerFunction)
 	end
 
+	--[[
+		AutoSkip
+		AutoSkip set to true
+		
+		If AutoSkip and #Entities >= 0 and CurrentWave.Value == #Waves then
+			--- Don't complete until #Entities is == 0
+		elseif AutoSkip and CurrentWave.Value ~= #Waves then
+			-- Skip into the next wave
+		end
+	--]]
+	
 	local function getBoss()
 		local EntitiesInMatch = MatchFolder.Entities:GetChildren()
 		
@@ -961,23 +890,17 @@ function MatchService:StartGame(MapInfo)
 		
 		return false
 	end
-      
-	local StoredWave = {}
-	self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = #Waves})
 	
-	local startTime = os.time()
-
-	while IsDefending.Value do  ---- WORKING ON THE REVIVE SYSTEM
-		local Wave = self:GenerateWave(EntitiesList, CurrentWave.Value, Room_Difficulty,CurrentFloor:GetAttribute("Spawns"))
-		local PlacementOrder,waitTable,_ = self:OrderByPriority(StoredWave[CurrentWave.Value] or Wave)
+	CurrentWave.Value = 1
+	
+	while CurrentWave.Value < (#Waves + 1) and IsDefending.Value do  ---- WORKING ON THE REVIVE SYSTEM
+		local PlacementOrder,waitTable,_ = self:OrderByPriority(Waves[CurrentWave.Value])
 		local TimeToSkip = 0
-		
-		self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = "∞"})
+		local SavedBeforeRestart
+		self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = #Waves})
 		
 		DeadAttackers = 0 -- Resets the counter
-		
-		StoredWave[CurrentWave.Value] = PlacementOrder
-		
+	
 		if GameIsPaused then
 			repeat
 				task.wait(.1)
@@ -986,7 +909,9 @@ function MatchService:StartGame(MapInfo)
 		
 		if RevivePlayer then
 			CurrentWave.Value -= 1	
-			PlacementOrder = StoredWave[CurrentWave.Value]
+			SavedBeforeRestart = CurrentWave.Value
+			PlacementOrder,waitTable,_ = self:OrderByPriority(Waves[CurrentWave.Value])
+			
 			RevivePlayer = false
 		end
 
@@ -1015,25 +940,27 @@ function MatchService:StartGame(MapInfo)
 		end
 
 		if #MatchFolder.Entities:GetChildren() >= 0 and CurrentWave.Value == #Waves then
-
+			--warn("[ WAVES ] - LAST WAVE OF THE ENTITIES")
 			repeat 
 				task.wait(.1) 
-				-- checkForHealth() 
+				checkForHealth() 
 			until #MatchFolder.Entities:GetChildren() <= 0 
 		elseif CurrentWave.Value ~= #Waves then
-
-			
+			--warn("[ WAVES ] - NORMAL WAVE OF THE ENTITIES")
 			repeat 
 				task.wait(.1)
-				-- checkForHealth()  
+				checkForHealth()  
 			until (#MatchFolder.Entities:GetChildren() <= 0) or Skipped.Value -- or if wave Skipped.Value
 		end
 		
-		CurrentWave.Value += 1	
-
-		if #game.Players:GetChildren() == 1 then
-			local player = game.Players:GetChildren()[1]
-			LeaderboardService:Save(player,{MapName = CurrentFloor:GetAttribute("FloorName"),Wave = CurrentWave.Value,Time = (os.time() - startTime)})
+		if CurrentWave.Value <= #Waves then
+			CurrentWave.Value += 1
+		end
+		
+		if lost_match.Value and not GameIsPaused then
+			--warn(" FAILED BECAUSE MATCH WAS LOST HERE ")
+			IsDefending.Value = false
+			break;
 		end
 		
 		if CurrentWave.Value > #Waves and not getBoss() then
@@ -1169,11 +1096,13 @@ function MatchService:SetupMap(FloorData : FloorInfo,FloorFolder)
 end
 
 function MatchService:StartShip(Room_Difficulty,Room, SpawnShip)
+	--local ShipStop = Start:GetAttribute("ShipStop")
 	if SpawnShip then
 		local Ship = workspace.Ship
 		local RootPart = Ship.PrimaryPart
 		local AlignOrientation = RootPart.AlignOrientation
 		local PositionAlign : AlignPosition = RootPart.PositionAlign
+		local Start = Room.Start
 		local End = Room.End
 		local EndPosition : CFrame = End.CFrame * CFrame.new(0,0,30)
 		
@@ -1202,6 +1131,8 @@ function MatchService:StartShip(Room_Difficulty,Room, SpawnShip)
 		
 		local Distance : number = 10000;
 		
+		-- It was at 7
+		
 		while Distance > 7 do
 			Distance = (RootPart.Position - End.Position).Magnitude
 			task.wait()	
@@ -1221,7 +1152,7 @@ function MatchService:StartShip(Room_Difficulty,Room, SpawnShip)
 		Ship.Spaceship:Stop()
 		self.Client.DisableShipVelocity:FireAll()
 	else
-		for _, player in pairs(game.Players:GetChildren()) do
+		for i, player in pairs(game.Players:GetChildren()) do
 
 			if player:FindFirstChild("Cash") then
 				player.Cash.Value = Room_Difficulty.StartingCash
@@ -1411,7 +1342,10 @@ function MatchService:GetPlayableMap()
 	--print("Highest Voted Floor and Difficulty (Example 1):", highest[1],result)
 
 	local FloorMap = {
-		["Experimentation Inside"] = 1;
+		Experimentation = 1;
+		Vow = 2,
+		Rend = 3,
+		Mansion = 4,
 	}
 	
 	
@@ -1433,8 +1367,18 @@ function MatchService:GetPlayableMap()
 		-- Add one more
 	}
 
+
 	local playerHasMap = {}
 	local mapWithmostPlayer
+
+	local function parseTex(tex)
+		local difficulty, floor = tex:match("_(%w+)$"), tex:match("^(.-)_")
+		return {
+			["Difficulty"] = difficulty,
+			["Floor"] = floor,
+			["Room"] = "Room1"
+		}
+	end
 
 	local function Autopick()
 		local processedPlayers = {}
@@ -1451,23 +1395,23 @@ function MatchService:GetPlayableMap()
 
 		for _, player in pairs(game.Players:GetChildren()) do
 			if not processedPlayers[player] then -- Check if the player has already been processed
-				-- local TempPlanets = ProfileService:Get(player, "Floors")
+				local CurrentFloorData = ProfileService:Get(player, "Floors")
 				processedPlayers[player] = true -- Mark the player as processed
 
 				for mapsName, value in pairs(FloorMap) do
 					local FloorInTable
 					local succ,_ = pcall(function()
-						FloorInTable = TempPlanets[value]
+						FloorInTable = CurrentFloorData[value]
 					end)
 
-					if succ and TempPlanets[value] then
+					if succ and CurrentFloorData[value] then
 						playerHasMap[mapsName].count = playerHasMap[mapsName].count + 1
 
 						for Difficulty = 1, #Difficulties_Modules[mapsName]:GetChildren() do
 							local DiffInMap = DifficultiesToString[Difficulty]
 
 							if DiffInMap then
-								if TempPlanets[value] >= Difficulty then
+								if CurrentFloorData[value] >= Difficulty then
 									playerHasMap[mapsName][DiffInMap] = playerHasMap[mapsName][DiffInMap] + 1
 								end
 							end
@@ -1501,15 +1445,15 @@ function MatchService:GetPlayableMap()
 			local Difficulty_Nr = DifficultiesToNumber[Difficulty]
 
 			for _,players in pairs(game.Players:GetChildren()) do
-				-- local TempPlanets = ProfileService:Get(players,"Floors")			
+				local CurrentFloorData = ProfileService:Get(players,"Floors")			
 				
-				if TempPlanets[Floor_Nr] then
+				if CurrentFloorData[Floor_Nr] then
 					playerHasMap[FloorName].count += 1 
 					
 					local DiffInMap = DifficultiesToString[Difficulty_Nr]
 
 					if DiffInMap then
-						if TempPlanets[Floor_Nr] >= Difficulty_Nr then -- if the value is greater than Diff nr then player has it
+						if CurrentFloorData[Floor_Nr] >= Difficulty_Nr then -- if the value is greater than Diff nr then player has it
 							playerHasMap[FloorName][DiffInMap] += 1
 						end
 					end
@@ -1613,21 +1557,28 @@ function compareTables(inputTables)
 end
 
 function MatchService.Client:GetPlayersFloors()
-	-- local ProfileService = Knit.GetService("ProfileService")
-	-- local AllFloors = {}
+	local ProfileService = Knit.GetService("ProfileService")
+	local AllFloors = {}
 
-	-- for _,player in pairs(game.Players:GetPlayers()) do
-	-- 	ProfileService:OnProfileReady(player):await()
-	-- 	local PlayerFloors = ProfileService:Get(player,"Floors")
-	-- 	table.insert(AllFloors,PlayerFloors)	
-	-- end 
+	for _,player in pairs(game.Players:GetPlayers()) do
+		ProfileService:OnProfileReady(player):await()
+		local PlayerFloors = ProfileService:Get(player,"Floors")
+		table.insert(AllFloors,PlayerFloors)	
+	end 
 	
-	-- local commonFloors = compareTables(TempPlanets)
+	local commonFloors = compareTables(AllFloors)
 	
-	-- if #AllFloors > 1 then
-	-- end
+	warn("THE DATA HERE --> ", commonFloors)
 
-	return TempPlanets
+	if #AllFloors > 1 then
+		self.Server.Client.SendNotification:FireAll(`You can only pick a planet & act that everyone has`,{Color = Color3.fromRGB(255, 238, 0), Time = 5})
+	end
+
+	if #commonFloors <= 0 then
+		commonFloors = {[1] = 1}
+	end
+
+	return commonFloors
 end
 
 
@@ -1665,7 +1616,7 @@ function MatchService:KnitStart()
 		character.DescendantAdded:Connect(onDescendantAdded)
 	end	
 	
-	-- GameService:StartVoting()
+	GameService:StartVoting()
 	
 	local function startMatchcooldown()
 		task.spawn(function() -- this is for the match cooldown
@@ -1938,9 +1889,7 @@ function MatchService:KnitStart()
 		
 		if (WantsToStart >= RequiredToStart) and not IsDefending.Value then
 			lost_match.Value = false
-			
-			self.Server.Client.SendNotification:FireAll(`You will not be placed on the leaderboard since is not a solo match`,{Color = Color3.fromRGB(255, 238, 0), Time = 5})
-			
+
 			Restarted = false
 			IsDefending.Value = true
 			VotedToRestart = {}
