@@ -65,6 +65,10 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 		newUnit:SetAttribute("Shiny", Info["Shiny"])
 		newUnit:SetAttribute("Spawntime", os.time())
 		
+		pcall(function()
+			newUnit:SetAttribute("UnitType",Units[Info.Name].Tags[1] or "Normal")
+		end)
+
 		if Info["Shiny"] then
 			newUnit:SetAttribute("Damage",1.3)
 		end
@@ -125,7 +129,9 @@ end
 
 function UnitService.Client:ChangeTargeting(_,UnitId)
 	local Unit = self.Server.Units[UnitId]
-	Unit:ChangeTargeting()
+	if Unit.Unit:GetAttribute("UnitType") == "Buff" then return "First" end
+	local newTargeting = Unit:ChangeTargeting()
+	return newTargeting
 end
 
 function UnitService.Client:Sell(player,UnitId)

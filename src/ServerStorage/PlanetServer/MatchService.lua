@@ -262,10 +262,20 @@ function MatchService:FollowNodes(Entity,Nodes,WaveInfo,OptinalPath)
 	end
 end
 
+function bossIsDefeated()
+	local Children = MatchFolder.Entities:GetChildren()
+
+	if #Children >= 1 then --- Added for the waves not ending
+		for _,entities in pairs(Children) do
+			entities:Destroy()
+		end
+	end
+end
+
 function checkForHealth()
 	local Children = MatchFolder.Entities:GetChildren()
 
-	if #Children > 1 then --- Added for the waves not ending
+	if #Children >= 1 then --- Added for the waves not ending
 		for _,entities in pairs(Children) do
 			local Health = entities:GetAttribute("Health")
 			if (Health <= 0) or (not entities:GetAttribute("IsActive")) then
@@ -273,6 +283,7 @@ function checkForHealth()
 			end
 		end
 	end
+
 end
 
 function MatchService:SpawnEntity(Name : string, WaveInfo, Nodes) 	--- Get the entities data & apply it
@@ -389,7 +400,9 @@ function MatchService:SpawnEntity(Name : string, WaveInfo, Nodes) 	--- Get the e
 			
 			if WaveInfo["IsBoss"] and Health <= 0 then -- This is for the match not ending
 				warn("[ BOSS HAS BEEN DEFEATED ]")
-				checkForHealth()
+				bossIsDefeated()
+				--checkForHealth()
+				IsDefending.Value = false --- Testing this
 			end
 			
 			if Health > 0 then
@@ -517,6 +530,7 @@ function MatchService:GameEnded(Info)
 		return 0
 	end
 
+
 	if Info.result == "Lose" and GetUnitsCount() >= 1 and canRestart then --- Check if player has placed a  unit else If player lose then ask if he wants to revive
 		local ReviveConnection : RBXScriptConnection;
 		-- local dt_time = 0
@@ -593,7 +607,7 @@ function MatchService:GameEnded(Info)
 			return "Continue"
 		else
 			GameIsPaused = false
-		 	MarketplaceService.ProcessReceipt = nil
+			MarketplaceService.ProcessReceipt = nil
 			self.Client.ReviveRequestAccepted:FireAll(false)
 			ReviveConnection:Disconnect()
 		end
@@ -663,7 +677,8 @@ function MatchService:GameEnded(Info)
 			Info["Exp"] = math.ceil(Info.Exp)
 		
 			QuestService:AddEXP(player, Info.Exp)
-		
+			
+			--warn("THIS IS THE INFO FOR WINNING ---> ",Info)
 			self.Client.MatchEnded:Fire(player,Info)
 		end
 
@@ -821,7 +836,7 @@ function MatchService:StartGame(MapInfo)
 	
 	MatchFolder:SetAttribute("MaxPlacement", Room_Difficulty.MaxPlacement)
 	AllowPlacement.Value = true
-	warn("TELLING THE AMOUNT OF PLAYERS ---> ", players)
+	--warn("TELLING THE AMOUNT OF PLAYERS ---> ", players)
 	
 	if Map then
 		local FloorMusic = Map:FindFirstChild("Floor")
@@ -897,7 +912,7 @@ function MatchService:StartGame(MapInfo)
 			if Votes and table.find(SkippedSaved, player.Name) then
 				local playerPos = table.find(SkippedSaved, player.Name)
 				Votes.Value -= 1
-				warn("Removing", player.Name, "from the skip list.")
+				--warn("Removing", player.Name, "from the skip list.")
 
 				task.delay(.5, function()
 					table.remove(SkippedSaved, playerPos)
@@ -905,26 +920,26 @@ function MatchService:StartGame(MapInfo)
 			elseif Votes and table.find(SkippedSaved, player.Name) == nil then
 				Votes.Value += 1
 				table.insert(SkippedSaved, player.Name)
-				warn("Adding", player.Name, "to the skip list.")
+				--warn("Adding", player.Name, "to the skip list.")
 			end
 
 			lastPlayerAction[player] = currentTime  -- Update the last action timestamp for this player
 		else
 			-- If the cooldown has not expired, do nothing
-			warn("Cooldown active for", player.Name)
+			--warn("Cooldown active for", player.Name)
 		end
 		
 		if CurrentWave.Value ~= #Waves and players == 1 then
 			Skipped.Value = autoSkip
-			print("Solo player has voted to autoskip" , autoSkip)
+			--print("Solo player has voted to autoskip" , autoSkip)
 		elseif Votes and CurrentWave.Value ~= #Waves and players >= 1 and Votes.Value >= players then
 			-- Send the Skipwave signal back 
 			Skipped.Value = true
-			print("WE HAVE STARTED SKIPPING")
+			--print("WE HAVE STARTED SKIPPING")
 
 		elseif Votes and CurrentWave.Value ~= #Waves and players >= 1 and Votes.Value < players then
 			Skipped.Value = false
-			print("WE HAVE STOPPED SKIPPING")
+			--print("WE HAVE STOPPED SKIPPING")
 		end
 	end
 	
@@ -946,7 +961,7 @@ function MatchService:StartGame(MapInfo)
 		
 		return false
 	end
-	
+      
 	local StoredWave = {}
 	self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = #Waves})
 	
@@ -1000,11 +1015,13 @@ function MatchService:StartGame(MapInfo)
 		end
 
 		if #MatchFolder.Entities:GetChildren() >= 0 and CurrentWave.Value == #Waves then
+
 			repeat 
 				task.wait(.1) 
 				-- checkForHealth() 
 			until #MatchFolder.Entities:GetChildren() <= 0 
 		elseif CurrentWave.Value ~= #Waves then
+
 			
 			repeat 
 				task.wait(.1)
@@ -1019,20 +1036,20 @@ function MatchService:StartGame(MapInfo)
 			LeaderboardService:Save(player,{MapName = CurrentFloor:GetAttribute("FloorName"),Wave = CurrentWave.Value,Time = (os.time() - startTime)})
 		end
 		
-		if lost_match.Value and not GameIsPaused then
-			warn(" FAILED BECAUSE MATCH WAS LOST HERE ")
+		if CurrentWave.Value > #Waves and not getBoss() then
+			--warn(" FAILED BECAUSE THE WAVE IS GREATER THA NTHE LIMIT ")
 			IsDefending.Value = false
 			break;
 		end
-
+		
 		self:GiveMoney(Room_Difficulty.CashPerWave,Room_Difficulty)
-
+		
 		local _,err = pcall(function()
 			GameService:WaveCompleted()
 		end)
 		
 		if err then
-			warn("[ COULD'T GIVE WAVECOMPLETION ] --> ", err)
+			--warn("[ COULD'T GIVE WAVECOMPLETION ] --> ", err)
 		end
 		
 		while (TimeToSkip < DefaultWaitUntilNextWave) and Skipped.Value do
@@ -1165,6 +1182,8 @@ function MatchService:StartShip(Room_Difficulty,Room, SpawnShip)
 		
 		Ship.Spaceship.TimePosition = 0
 		Ship.Spaceship:Play()
+		
+		RootPart:SetNetworkOwnershipAuto()
 		
 		PositionAlign.Position = Room.ShipSpawn.Position
 		Ship:PivotTo(Room.ShipSpawn.CFrame)
@@ -1564,19 +1583,22 @@ end
 function compareTables(inputTables)
 	local commonValues = {}
 
-	warn(inputTables,inputTables[1])
+	if #inputTables == 0 or next(inputTables[1]) == nil then
+		return {[1] = 1} -- Return empty table if inputTables is empty or the first table is empty
+	end
 
 	for key, value in pairs(inputTables[1]) do
 		local minValue = value 
-
 		local isCommonValue = true
+
 		for i = 2, #inputTables do
-			warn("WE COMPARING")
 			local currentValue = inputTables[i][key]
-			if not currentValue or currentValue ~= value then
+
+			if not currentValue then
 				isCommonValue = false
 				break
 			end
+
 			if currentValue < minValue then
 				minValue = currentValue
 			end
@@ -1882,8 +1904,6 @@ function MatchService:KnitStart()
 				Room = "",
 				MapName = ""
 			}
-
-			CurrentWave.Value = 1
 			
 			LatestVote = {}
 			Voted = {}
