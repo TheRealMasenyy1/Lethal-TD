@@ -648,6 +648,7 @@ function UnitController:OpenInteraction(Unit)
 					ActionFrame.Sell.Visible = true
 					ActionFrame.Upgrade.Visible = true
 					ActionFrame.Targeting.Visible = true
+					ActionFrame.Targeting.Content.Mode.Text = `[ {UnitInformation.Targeting} ]`
 
 					if UnitInformation.Level >= Upgrades then 
 						ActionFrame.Upgrade.Visible = false

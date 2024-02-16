@@ -1,7 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
-local AdminController = Knit.CreateService { Name = "AdminService", Client = {}}
+local AdminController = Knit.CreateController { Name = "AdminController", Client = {}}
 
 function AdminController:KnitStart()
     

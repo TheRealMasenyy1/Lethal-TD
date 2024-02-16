@@ -896,7 +896,7 @@ function MatchService:StartGame(MapInfo)
 	while CurrentWave.Value < (#Waves + 1) and IsDefending.Value do  ---- WORKING ON THE REVIVE SYSTEM
 		local PlacementOrder,waitTable,_ = self:OrderByPriority(Waves[CurrentWave.Value])
 		local TimeToSkip = 0
-		local SavedBeforeRestart
+	
 		self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = #Waves})
 		
 		DeadAttackers = 0 -- Resets the counter
@@ -909,7 +909,6 @@ function MatchService:StartGame(MapInfo)
 		
 		if RevivePlayer then
 			CurrentWave.Value -= 1	
-			SavedBeforeRestart = CurrentWave.Value
 			PlacementOrder,waitTable,_ = self:OrderByPriority(Waves[CurrentWave.Value])
 			
 			RevivePlayer = false
