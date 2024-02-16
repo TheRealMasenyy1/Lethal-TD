@@ -256,6 +256,16 @@ function MatchService:FollowNodes(Entity,Nodes,WaveInfo,OptinalPath)
 	end
 end
 
+function bossIsDefeated()
+	local Children = MatchFolder.Entities:GetChildren()
+
+	if #Children >= 1 then --- Added for the waves not ending
+		for _,entities in pairs(Children) do
+			entities:Destroy()
+		end
+	end
+end
+
 function checkForHealth()
 	local Children = MatchFolder.Entities:GetChildren()
 
@@ -384,7 +394,8 @@ function MatchService:SpawnEntity(Name : string, WaveInfo, Nodes) 	--- Get the e
 			
 			if WaveInfo["IsBoss"] and Health <= 0 then -- This is for the match not ending
 				warn("[ BOSS HAS BEEN DEFEATED ]")
-				checkForHealth()
+				bossIsDefeated()
+				--checkForHealth()
 				IsDefending.Value = false --- Testing this
 			end
 			
@@ -496,6 +507,7 @@ function MatchService:GameEnded(Info)
 
 		return 0
 	end
+
 
 	if Info.result == "Lose" and GetUnitsCount() >= 1 and canRestart then --- Check if player has placed a  unit else If player lose then ask if he wants to revive
 		local ReviveConnection : RBXScriptConnection;
@@ -643,7 +655,8 @@ function MatchService:GameEnded(Info)
 			Info["Exp"] = math.ceil(Info.Exp)
 		
 			QuestService:AddEXP(player, Info.Exp)
-		
+			
+			--warn("THIS IS THE INFO FOR WINNING ---> ",Info)
 			self.Client.MatchEnded:Fire(player,Info)
 		end
 
@@ -1098,6 +1111,8 @@ function MatchService:StartShip(Room_Difficulty,Room, SpawnShip)
 		
 		Ship.Spaceship.TimePosition = 0
 		Ship.Spaceship:Play()
+		
+		RootPart:SetNetworkOwnershipAuto()
 		
 		PositionAlign.Position = Room.ShipSpawn.Position
 		Ship:PivotTo(Room.ShipSpawn.CFrame)

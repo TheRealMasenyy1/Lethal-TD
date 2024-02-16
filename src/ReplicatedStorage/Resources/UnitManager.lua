@@ -41,7 +41,7 @@ function UnitManager.new(Unit)
 		First = true; -- First one seen
 		Strongest = false; -- The one with most health
 		Weakest = false; -- the one with least health
-		Last = false; -- the one behind everyone
+		Fastest = false; -- the one behind everyone
 	}
 	
 	return self
@@ -102,10 +102,12 @@ function UnitManager:SetCooldown() --- Hacky but since the cooldown happens afte
 end
 
 function UnitManager:Sell()
-	self.Owner.Cash.Value += self.Moneyspent -- if self.Moneyspent > 1000 then 500 else self.Moneyspent -- What the player gets for selling a unit(TEMP)
-	self.IsActive = false
-	self.Unit:Destroy()
-	self.Detector:Destroy()
+	if self.IsActive then
+		self.Owner.Cash.Value += self.Moneyspent -- if self.Moneyspent > 1000 then 500 else self.Moneyspent -- What the player gets for selling a unit(TEMP)
+		self.IsActive = false
+		self.Unit:Destroy()
+		self.Detector:Destroy()	
+	end
 end
 
 function UnitManager:GetDictionaryLength(Table)
@@ -122,17 +124,31 @@ end
 
 function UnitManager:DecideTarget()
 	local TargetAmount = #self.InsideZone
-	
+
+	local function accountForFastUnits()
+		local FastestEntity = 0
+		local newTarget;
+		for position,TargetInfo in  pairs(self.InsideZone) do
+			local Speed = TargetInfo.Character:GetAttribute("Speed")
+
+			if Speed > FastestEntity then
+				FastestEntity = Speed
+				newTarget = self.InsideZone[position].Character
+			end
+		end
+
+		return newTarget
+	end
+
 	if TargetAmount > 1 then
 		if self.Priority.First then
 			if #self.InsideZone[1].Character:GetChildren() <= 0 then  table.remove(self.InsideZone,1) end
 			
 			--self.SetTargetingMode.Text = "TargetingMode: ".."First"
 			self.Targeting = "First"
-				
 			return self.InsideZone[1].Character
 		elseif self.Priority.Weakest then
-			self.SetTargetingMode.Text = "TargetingMode: ".."Weakest"
+			-- self.SetTargetingMode.Text = "TargetingMode: ".."Weakest"
 			self.Targeting = "Weakest"
 			local ChoosenTarget = {
 				Health = math.huge,
@@ -165,6 +181,12 @@ function UnitManager:DecideTarget()
 			end
 			
 			return ChoosenTarget.Target
+		elseif self.Priority.Fastest then
+			if #self.InsideZone[1].Character:GetChildren() <= 0 then  table.remove(self.InsideZone,1) end
+			
+			--self.SetTargetingMode.Text = "TargetingMode: ".."First"
+			self.Targeting = "Fastest"
+			return accountForFastUnits() or self.InsideZone[1].Character		
 		end
 		
 		
@@ -323,7 +345,7 @@ function UnitManager:ChangeTargeting()
 			"First"; -- First one seen
 			"Strongest"; -- The one with most health
 			"Weakest"; -- the one with least health
-			"Last" -- the one behind everyone
+			"Fastest" -- Targets the Fastest Unit
 		}
 		
 		self.Priority[self.Targeting] = false -- Disables the old targeting
@@ -332,7 +354,7 @@ function UnitManager:ChangeTargeting()
 			if value == self.Targeting then
 				self.Targeting = if key < #targetingModes then targetingModes[key + 1] else  targetingModes[1]
 				self.Priority[self.Targeting] = true
-				return
+				return self.Targeting
 			end
 		end	
 	end
@@ -474,7 +496,6 @@ function UnitManager:OnZoneTouched(Attackfunc) -- Check for Attacker inside the 
 			
 			if Target and Target:FindFirstChild("RootPart") then
 				self.Target = Target
-				-- LatestTarget = self.Target:GetAttribute("Id")
 				
 				local Position : Vector3 = Vector3.new(self.Target.RootPart.Position.X,RootPart:GetPivot().Position.Y,self.Target.RootPart.Position.Z)
 				

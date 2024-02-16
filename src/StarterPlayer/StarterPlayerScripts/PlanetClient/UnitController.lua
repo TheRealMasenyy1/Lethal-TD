@@ -223,12 +223,12 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 			Inputs.Position = UDim2.new(0,Mouse.X + 20,0,Mouse.Y + (Inputs.AbsoluteSize.Y / 2))
 		end))
 		
-		--InputCleaner:GiveTask(UserInputService.TouchTapInWorld:Connect(function()
-		--	if PhoneSelectedUnit then
-		--		Placed = true
-		--		--warn("TAPPED IN THE WORLD")
-		--	end
-		--end))
+		InputCleaner:GiveTask(UserInputService.TouchTapInWorld:Connect(function()
+			if PhoneSelectedUnit then
+				Placed = true
+				--warn("TAPPED IN THE WORLD")
+			end
+		end))
 		
 		local function PlaceParticle(CFRAME : CFrame ,Color : Color3)
 			
@@ -246,11 +246,12 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 			Particle.Parent = Attachment
 			
 			if Color then
-				Particle.Color = ColorSequence.new(Color)
+				pcall(function()
+					Particle.Color = ColorSequence.new(Color)
+				end)
 			end
 			
 			Particle:Emit(50)
-			
 			task.delay(1,game.Destroy,part)
 		end
 
@@ -641,21 +642,29 @@ function UnitController:OpenInteraction(Unit)
 				
 				ActionFrame.Upgrade.Visible = false
 				ActionFrame.Sell.Visible = false
-				
-				--UICleaner:GiveTask(Frame.Targeting.MouseButton1Down:Connect(function()
-				--	local UpdateOnUpgrade = UnitService:ChangeTargeting(UnitId,UnitInformation.Targeting)
-				--	warn("[ INFO ] - THE UNIT HAS ", UpdateOnUpgrade)
-				--	UICleaner:Destroy()
-				--end))
-				
+				ActionFrame.Targeting.Visible = false
+						
 				if IsOwner then
 					ActionFrame.Sell.Visible = true
 					ActionFrame.Upgrade.Visible = true
-					
+					ActionFrame.Targeting.Visible = true
+
 					if UnitInformation.Level >= Upgrades then 
-						ActionFrame.Upgrade.Visible = false 
+						ActionFrame.Upgrade.Visible = false
+					elseif Unit:GetAttribute("UnitType") == "Buff" then
+						ActionFrame.Targeting.Visible = false
 					end
-					
+				
+					UpgradeInputs:GiveTask(ActionFrame.Targeting.MouseButton1Down:Connect(function()
+						local UpdateOnUpgrade = UnitService:ChangeTargeting(UnitId) -- ,UnitInformation.Targeting
+						UpdateOnUpgrade:andThen(function(newTargeting)
+							warn("[ INFO ] - THE UNIT HAS ", newTargeting)
+							ActionFrame.Targeting.Content.Mode.Text = `[ {newTargeting} ]`
+						end)
+						-- UICleaner:Destroy()
+					end))
+	
+
 					UpgradeInputs:GiveTask(ActionFrame.Sell.Activated:Connect(function()
 						Shortcut:PlaySound("MouseClick")
 						UnitService:Sell(UnitId)
