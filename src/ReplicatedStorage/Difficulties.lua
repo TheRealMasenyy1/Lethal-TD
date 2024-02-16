@@ -91,6 +91,8 @@ local function convertDifficulty(difficulty)
 	local waveCompletionReward = getPropertyValue(completionRewards, "Wave")
 	local expCompletionReward = getPropertyValue(completionRewards, "Exp")
 	local extraRewards = getPropertyValue(completionRewards,"ChanceToGet")
+	local maxVariety = getPropertyValue(difficulty, "MaxVariety") or nil
+	local incrementperwave = getPropertyValue(difficulty, "IncrementPerWave") or nil
 	--local cashfailedrewards = getPropertyValue(failedRewards,"Cash")
 	--local Expfailedrewards = getPropertyValue(failedRewards,"Exp")
 	
@@ -115,6 +117,8 @@ local function convertDifficulty(difficulty)
 		StartingCash = startingCash,
 		CashPerWave = cashPerWave,
 		MaxPlacement = maxplacement,
+		MaxVariety = maxVariety,
+		IncrementPerWave = incrementperwave,
 		Boss = getBoss(waves),
 		
 		CompletionRewards = {
