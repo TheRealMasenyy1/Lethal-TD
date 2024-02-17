@@ -1,0 +1,19 @@
+---Next update ----
+Add arrows
+Fix or add Targeting Selection [ Done ]
+Add Endless mode [ Done ]
+------ Slow -------
+Add Rewards for every 10 waves [ Done ]
+Exp [ Done ]
+Scrap [ Done ]
+Gold [ Done ]
+Wave 100: Spray Unit [ I don't know ]
+
+Add Shiny particle
+Add money unit
+Disable collision [ Done ]
+Disable BossHealth ondeath [ Done ] 
+
+--- Optimization ---
+While loop in UnitManager
+Better Controller Support

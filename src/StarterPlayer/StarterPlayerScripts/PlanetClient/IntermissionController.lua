@@ -12,6 +12,7 @@ local player = game:GetService("Players").LocalPlayer
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Shortcut = require(ReplicatedStorage.Shortcut)
 local Maid = require(ReplicatedStorage.maid)
+local EntityInfo = require(SharedPackages.Animations)
 
 local Viewports = SharedPackages.Viewports
 
@@ -23,10 +24,14 @@ local FloorInfoUI = InterMissionUI:WaitForChild("FloorInfo")
 local FloorsUI = InterMissionUI:WaitForChild("Floors")
 local FloorDisplay = FloorsUI:WaitForChild("Frame")
 local RoomsFrame = InterMissionUI:WaitForChild("Rooms")
+local EndlessRewards = Core:WaitForChild("EndlessRewards")
+
+local RewardsBtn = Core:WaitForChild("Rewards")
+
 local ViewportLocation = {}
 local ViewportLocationForDifficulties = {}
 
-
+local RewardService;
 local Floors_Folder = workspace.Floors
 local CheckForUpdate = false
 local AlreadyVoted = false
@@ -106,16 +111,6 @@ function IntermissionController:ShowRooms(_,currentFloor,FloorData,RoomsInFloor,
 		[5] = "Impossible",
 		-- Add one more
 	}
-	
-
-	--[[
-	
-		THIS IS WAS THE FLOOR  
-	
-	
-	--]]
-	
-	
 	
 	for currentRoom : IntValue, Difficulty : string in pairs(Difficulties) do
 		--- This will have to set bro this and that
@@ -633,11 +628,78 @@ function IntermissionController:StartInter(ChapterData)
 	end)
 end
 
+function IntermissionController:ShowRewards(Rewards)
+	local RewardsContent = EndlessRewards:WaitForChild("Content")
+	local RewardsList = RewardsContent:WaitForChild("List")
+	local Icons = RewardsList.Icons
+
+	for wave,Reward in pairs(Rewards) do
+		local btn_name = wave / 10
+		local Reward_btn = RewardsList:FindFirstChild(btn_name)
+		
+		if Reward_btn then
+			local Icon = Icons:FindFirstChild(Reward.Name) or Viewports:FindFirstChild(Reward.Name)
+
+			if Icon then
+				local Wave_lb = Reward_btn.Wave
+				local Amount_lb = Reward_btn.Amount
+
+				local newIcon = Icon:Clone()
+				newIcon.Parent = Reward_btn
+				newIcon.Visible = true
+
+				Wave_lb.Text = "Wave " .. wave .. "+"
+				Amount_lb.Text = "X".. Reward.Value
+
+				--- For viewPorts 
+				local _,_ = pcall(function()
+					local WorldModel = Icon:FindFirstChild("WorldModel")
+
+					if WorldModel then
+						local Model = WorldModel:FindFirstChildWhichIsA("Model")
+
+						if Model then
+							Amount_lb.Text = Reward.Value
+							-- warn("[ INFO ]ToName - PLAYING ANIMATION FOR ", EntityInfo ,Model.Name)
+							local Animation = self:PlayAnimation(Model,EntityInfo[Model.Name].Idle)
+							Animation:Play()
+						end				
+					end
+				end)
+			else
+				warn("Could not find the rewards Icon")
+			end
+		else
+			warn("Could not find Reward button ---> ", btn_name)
+		end
+	end
+end
+
 function IntermissionController:KnitStart()
 	local ChapterData = self:GetFloors()
 	local MatchService = Knit.GetService("MatchService")
+	RewardService = Knit.GetService("RewardService")
+
 	-- Disables the Reset Button
 	
+	RewardsBtn.Activated:Connect(function()
+		EndlessRewards.Visible = not EndlessRewards.Visible
+		Shortcut:PlaySound("MouseClick")
+		if EndlessRewards.Visible then
+			local Rewards = RewardService:GetRewards()
+			
+			Rewards:andThen(function(RewardInfo)
+				local FloorToName = Floors_Folder[Selected.Floor]:GetAttribute("FloorName")
+				self:ShowRewards(RewardInfo[FloorToName])
+			end)			
+		end
+	end)
+
+	EndlessRewards.Exit.Activated:Connect(function()
+		Shortcut:PlaySound("MouseClick")
+		EndlessRewards.Visible = false
+	end)
+
 	MatchService.Restart:Connect(function()
 		maid:Destroy()
 		self:StartInter(ChapterData)

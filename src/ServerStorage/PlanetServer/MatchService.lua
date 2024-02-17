@@ -37,6 +37,7 @@ local StartingHealth = 10
 local GameIsPaused = false
 local RevivePlayer = false --- This is true when the game starts, but then becomes false if the offer to revive gets decline
 local SkippedSaved = {}
+local RewardService
 
 local MatchService = Knit.CreateService {
 	Name = "MatchService";
@@ -83,7 +84,6 @@ local IsDefending = workspace.IsDefending
 local DefaultWaitUntilNextWave = 5 -- seconds
 local lost_match = workspace.MatchLost
 local reviveId = 1754721725
-
 
 local TempPlanets = {
 	[1] = 2,
@@ -388,7 +388,7 @@ function MatchService:SpawnEntity(Name : string, WaveInfo, Nodes) 	--- Get the e
 			local Health = newEntity:GetAttribute("Health")
 			local MaxHealth = newEntity:GetAttribute("MaxHealth")
 			
-			HealthLabel.Text = Health .. "/" .. MaxHealth
+			HealthLabel.Text = math.floor(Health) .. "/" .. MaxHealth
 			
 			if WaveInfo["IsBoss"] then
 				self.Client.ActivateBoss:FireAll(Health,newEntity:GetAttribute("MaxHealth"))
@@ -397,15 +397,8 @@ function MatchService:SpawnEntity(Name : string, WaveInfo, Nodes) 	--- Get the e
 					newEntity:SetAttribute("Health",0) 
 				end
 			end
-			
-			if WaveInfo["IsBoss"] and Health <= 0 then -- This is for the match not ending
-				warn("[ BOSS HAS BEEN DEFEATED ]")
-				bossIsDefeated()
-				--checkForHealth()
-				IsDefending.Value = false --- Testing this
-			end
-			
-			if Health > 0 then
+		
+		if Health > 0 then
 				self.Client.DamageIndicator:FireAll(newEntity)	
 				
 				if WaveInfo["IsBoss"] and Health >= 0 then
@@ -711,7 +704,7 @@ function MatchService:OrderByPriority(CurrentWaveTable)
 	return CurrentWaveTable,waitTable,AmountForWave
 end
 
-function MatchService:GiveMoney(Amount : number,Info)
+function MatchService:GiveMoney(Amount : number,Info,MapName)
 	local QuestService = Knit.GetService("QuestService")
 	local RescievedReward = {}
 
@@ -724,6 +717,7 @@ function MatchService:GiveMoney(Amount : number,Info)
 			
 			if not RescievedReward[player.Name] then
 				RescievedReward[player.Name] = true
+				RewardService:GiveReward(player,MapName,CurrentWave.Value)
 				GameService:RewardScrap(player,Info.CompletionRewards.Wave)
 			end
 			
@@ -738,13 +732,23 @@ function MatchService:GetFloorAndRoom(MapInfo)
 	return tonumber(nrFloor), tonumber(nrRoom)
 end
 
+type EntityPreset = {
+	Amount : number;
+	Direction : string?;
+	Enemy : string;
+	HP : number;
+	Priority : number?;
+	Speed : number;
+	IsBoss : boolean?;
+}
 
-function MatchService:GenerateWave(EntityList, CurrentWave : IntValue & number, Room_Difficulty, Spawns : number)
+local BossHealth = 1000
+
+function MatchService:GenerateWave(EntityList, Room_Difficulty, Spawns : number)
 
 	local function Variety(MaxVariety : number)
 		local VarietyAmount = math.random(1,MaxVariety)
 		local totalAmount = #EntityList
-		local Choosen = 0
 		local List = {}
 
 		-- add could down for each Entity
@@ -762,27 +766,28 @@ function MatchService:GenerateWave(EntityList, CurrentWave : IntValue & number, 
 		[1] = "Start",
 		[2] = "Start1",
 		[3] = "Start2",
-
 	}
 
 	-- Add boss every 10 round
-	if CurrentWave % 10 == 0 then
+	if CurrentWave.Value % 10 == 0 then
 		table.insert(Wave,{
 			Amount = 1,
 			Direction = "",
 			Enemy = "Tank",
-			HP = 1000 * CurrentWave,
+			HP = (BossHealth * 2),
 			Priority = 1.05, -- Boss should always be last
 			Speed = 4,
 			IsBoss = true,
 		})
+
+		BossHealth = math.floor(BossHealth * 1.5)
 	end
 
 	for Entity,Priority in pairs(WaveList) do
 		local Preset : EntityPreset = {
 			Amount = math.ceil((5 + Room_Difficulty.IncrementPerWave) / MaxVarieties);
 			Enemy = Entity;
-			HP = StartingHealth * 1.12; -- Should be a value from the Map Data
+			HP = StartingHealth; -- Should be a value from the Map Data
 			Speed = 5; -- Should be a value from the Map Data
 			Priority = Priority;
 			SpawnLocation = if Spawns and Spawns > 1 then Locations[math.random(1,Spawns)] else "Start"
@@ -791,7 +796,7 @@ function MatchService:GenerateWave(EntityList, CurrentWave : IntValue & number, 
 		table.insert(Wave,Preset)
 	end
 
-	StartingHealth = math.ceil(StartingHealth * 1.12) -- Save health
+	StartingHealth = math.ceil(StartingHealth * 1.05) -- Save health
 	--warn("[ GENERATED WAVE ]: ",Wave)
 	
 	return Wave
@@ -861,6 +866,7 @@ function MatchService:StartGame(MapInfo)
 	
 	--- DAMAGE DETECTOR ---
 	task.spawn(function()
+		
 		while IsDefending.Value do
 			local heartZone = workspace:GetPartsInPart(Heart,overlaps)
 			for _,Parts in pairs(heartZone) do
@@ -878,15 +884,14 @@ function MatchService:StartGame(MapInfo)
 					
 					if Health.Value <= 0 or Character:GetAttribute("IsBoss") then
 						-- Game completed
-						gameStop = true
 						lost_match.Value = true
 						AllowPlacement.Value = false
 						WaveIsRunning = false
 						CountDownOnGoing = false
 						self:GameEnded({Coins = Room_Difficulty.CompletionRewards.Difficulty * 0.10, Exp = Room_Difficulty.CompletionRewards.Exp * 0.10, result = "Lose", Color = Color3.fromRGB(255,0,0),Room = MapInfo.Difficulty, Floor = string.match(MapInfo.Floor,"%d+")})
 					end
+					
 					Character:Destroy()
-
 					break;
 				end
 			end
@@ -947,28 +952,14 @@ function MatchService:StartGame(MapInfo)
 		AutoActivated = true	
 		self.Client.SkipWave:Connect(playerFunction)
 	end
-
-	local function getBoss()
-		local EntitiesInMatch = MatchFolder.Entities:GetChildren()
-		
-		for _,monsters in pairs(EntitiesInMatch) do
-			local IsBoss = monsters:GetAttribute("IsBoss")
-			
-			if IsBoss then
-				return true
-			end
-		end
-		
-		return false
-	end
-      
+   
 	local StoredWave = {}
-	self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = #Waves})
+	self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = "∞"})
 	
 	local startTime = os.time()
 
 	while IsDefending.Value do  ---- WORKING ON THE REVIVE SYSTEM
-		local Wave = self:GenerateWave(EntitiesList, CurrentWave.Value, Room_Difficulty,CurrentFloor:GetAttribute("Spawns"))
+		local Wave = self:GenerateWave(EntitiesList,Room_Difficulty,CurrentFloor:GetAttribute("Spawns"))
 		local PlacementOrder,waitTable,_ = self:OrderByPriority(StoredWave[CurrentWave.Value] or Wave)
 		local TimeToSkip = 0
 		
@@ -1036,13 +1027,7 @@ function MatchService:StartGame(MapInfo)
 			LeaderboardService:Save(player,{MapName = CurrentFloor:GetAttribute("FloorName"),Wave = CurrentWave.Value,Time = (os.time() - startTime)})
 		end
 		
-		if CurrentWave.Value > #Waves and not getBoss() then
-			--warn(" FAILED BECAUSE THE WAVE IS GREATER THA NTHE LIMIT ")
-			IsDefending.Value = false
-			break;
-		end
-		
-		self:GiveMoney(Room_Difficulty.CashPerWave,Room_Difficulty)
+		self:GiveMoney(Room_Difficulty.CashPerWave,Room_Difficulty,CurrentFloor:GetAttribute("FloorName"))
 		
 		local _,err = pcall(function()
 			GameService:WaveCompleted()
@@ -1637,6 +1622,7 @@ function MatchService:KnitStart()
 	local RequiredToStart = #game.Players:GetChildren()
 	local ProfileService = Knit.GetService("ProfileService")
 	GameService = Knit.GetService("GameService")
+	RewardService = Knit.GetService("RewardService")
 	
 	local VotedToRestart = {}
 	local Restarted = false
@@ -1908,6 +1894,9 @@ function MatchService:KnitStart()
 			LatestVote = {}
 			Voted = {}
 			
+			StartingHealth = 10
+			BossHealth = 1000
+			CurrentWave.Value = 1
 			WantsToStart = 0
 			
 			for _,players in pairs(game.Players:GetChildren()) do
@@ -1939,7 +1928,9 @@ function MatchService:KnitStart()
 		if (WantsToStart >= RequiredToStart) and not IsDefending.Value then
 			lost_match.Value = false
 			
-			self.Server.Client.SendNotification:FireAll(`You will not be placed on the leaderboard since is not a solo match`,{Color = Color3.fromRGB(255, 238, 0), Time = 5})
+			if #game.Players:GetChildren() > 1 then
+				self.Client.SendNotification:FireAll(`You will not be placed on the leaderboard since is not a solo match`,{Color = Color3.fromRGB(255, 238, 0), Time = 5})
+			end
 			
 			Restarted = false
 			IsDefending.Value = true

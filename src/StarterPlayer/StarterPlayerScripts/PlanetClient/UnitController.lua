@@ -718,7 +718,7 @@ function UnitController:PlayAnimation(Unit,Animation)
 end
 
 function UnitController:ApplyImages(ToolbarUI,EquippedUnits) -- This shouldn't actually be here, but it's just for testing
-	print("[ INFO ] - THE EQUIPPED TABLE --> ", EquippedUnits)
+	-- print("[ INFO ] - THE EQUIPPED TABLE --> ", EquippedUnits)
 	
 	for _,Btn in pairs(ToolbarUI:GetChildren()) do
 		if Btn:IsA("ImageButton") and EquippedUnits[Btn.Name] then
@@ -743,7 +743,7 @@ function UnitController:ApplyImages(ToolbarUI,EquippedUnits) -- This shouldn't a
 					local Model = WorldModel:FindFirstChildWhichIsA("Model")
 
 					if Model then
-						print("[ INFO ] - PLAYING ANIMATION FOR ", EntityInfo ,Model.Name)
+						-- print("[ INFO ] - PLAYING ANIMATION FOR ", EntityInfo ,Model.Name)
 						local Animation = self:PlayAnimation(Model,EntityInfo[Model.Name].Idle)
 						Animation:Play()
 					end				

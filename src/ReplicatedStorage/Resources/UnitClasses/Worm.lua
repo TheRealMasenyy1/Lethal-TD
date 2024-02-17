@@ -24,7 +24,7 @@ end
 
 function Worm:Hitbox(Position : Vector3)
 	local Detector = Instance.new("Part")
-	Detector.Size = Vector3.new(10,10,10)
+	Detector.Size = Vector3.new(15,10,15)
 	Detector.Position = Position
 	Detector.Transparency = 1
 	Detector.CanCollide = false

@@ -7,7 +7,7 @@ local Promise = require(ReplicatedStorage.Packages.Promise)
 
 local LeaderboardService = Knit.CreateService { Name = "LeaderboardService", Client = {}}
 
-local Storage = "GlobalDatastore_TESTINGV6"
+local Storage = "GlobalDatastore_TESTINGV9"
 local GlobalDatastore =  {
     ["Experimentation Inside"] = DataStoreService:GetOrderedDataStore(Storage)
 }
@@ -20,7 +20,7 @@ type SaveInfo = {
 
 local maxItems = 10 --- Only show top ten
 local minValueDisplayed = 1
-local maxValueDisplayed = 10
+local maxValueDisplayed = 10e15
 local GrabDelay = 10
 local GlobalLeaderboard = {};
 
@@ -70,11 +70,24 @@ function LeaderboardService:Save(player,Info : SaveInfo)
     local timePassed = os.time() - lastSaved 
 
     local function SaveIntoLeaderboard() 
-        GlobalDatastore[Info.MapName]:UpdateAsync(player.UserId,function()
-            lastSaved = os.time() - lastSaved
-            print(`{player.Name} saved data --> `, Info.Wave)
-            return Info.Wave
-        end)                   
+        local GetplayersData = GlobalDatastore[Info.MapName]:GetAsync(player.UserId)
+        
+        warn("This is the players data ", GetplayersData)
+        
+        if not GetplayersData then
+            GlobalDatastore[Info.MapName]:SetAsync(player.UserId,Info.Wave)
+        else
+            GlobalDatastore[Info.MapName]:UpdateAsync(player.UserId,function(Value)
+                warn("THE UNIT  ---> ", Value)
+                if Value and Value < Info.Wave then
+                    lastSaved = os.time() - lastSaved
+                    print(`{player.Name} saved data --> `, Info.Wave)
+                    return Info.Wave
+                end
+            end)
+        end
+
+                           
     end
 
     return Promise.new(function(resolve,reject,onCancel)      
@@ -94,7 +107,7 @@ function LeaderboardService:Save(player,Info : SaveInfo)
             lastSaved = os.time()
             return resolve(result)
         else
-            return reject(result)
+            return warn(result)
         end
     end)
 end

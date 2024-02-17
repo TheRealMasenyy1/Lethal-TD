@@ -91,13 +91,13 @@ function MatchController:StartGame()
 		end))
 	end
 	
-	Wave.Text = "Wave: " .. CurrentWave.Value .."/" .. MaxWave
+	Wave.Text = "Wave: " .. CurrentWave.Value .."/" .. "∞"
 	
 	CurrentWave.Changed:Connect(function()
 		Wave.Visible = true	
 		if CurrentWave.Value > 0 and workspace.IsDefending.Value then
 			self:Notify(`Wave {CurrentWave.Value} starting!`)
-			Wave.Text = "Wave: " .. CurrentWave.Value .. "/" .. MaxWave			
+			Wave.Text = "Wave: " .. CurrentWave.Value .. "/" .. "∞"			
 		end
 	end)
 
@@ -118,6 +118,8 @@ function MatchController:StartGame()
 		
 		if Health >= 100 then
 			HealthBar.Size = UDim2.new(1,0,1,0)
+		-- elseif Health <= 0 then
+			
 		end
 
 		local Tween1 = TweenService:Create(HealthBar,TweenInfo.new(.5),Prop1)
@@ -426,6 +428,7 @@ end
 function MatchController:KnitStart()
 	MatchService = Knit.GetService("MatchService")
 	-- local Intermission = Core:WaitForChild("Intermission")
+	local RewardService = Knit.GetService("RewardService")
 	local StartGameFrame = Content:WaitForChild("StartGame")
 	local StartGame_btn = Content:WaitForChild("StartGame").Button
 	-- CountDown until it starts
@@ -580,6 +583,10 @@ function MatchController:KnitStart()
 		self:Notify(Notice,Color)
 	end)
 	
+	RewardService.SendNotification:Connect(function(Notice : string, Color : Color3)
+		self:Notify(Notice,Color)
+	end)
+	
 	MatchService.ActivateBoss:Connect(function(Health,MaxHealth)
 		local HealthFrame = Core:WaitForChild("HealthFrame")
 		local Foreground = HealthFrame:WaitForChild("Foreground")
@@ -602,6 +609,7 @@ function MatchController:KnitStart()
 		
 		if Health <= 0 then
 			--self:Notify(`Defeat the boss!`)
+			HealthFrame.Visible = false
 			SoundForBoss:Stop()
 		end
 		
