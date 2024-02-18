@@ -28,7 +28,7 @@ function CosmicThumper:Hitbox(Position : Vector3)
 	Detector.Size = Vector3.new(10,5,15)	
 	Detector.Position = Position
 	Detector.CFrame = self.Unit.RootPart.CFrame * CFrame.new(0,0,-((self.Range/2) * 1.1))
-	Detector.Transparency = 0.5
+	Detector.Transparency = 1
 	Detector.CanCollide = false
 	Detector.Anchored = true
 	Detector.Parent = self.Unit

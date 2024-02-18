@@ -792,7 +792,7 @@ function MatchService:GenerateWave(EntityList, Room_Difficulty, Spawns : number)
 			Priority = Priority;
 			SpawnLocation = if Spawns and Spawns > 1 then Locations[math.random(1,Spawns)] else "Start"
 		};
-
+		warn("Spawns --> ", Spawns)
 		table.insert(Wave,Preset)
 	end
 

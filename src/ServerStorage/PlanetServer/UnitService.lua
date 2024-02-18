@@ -101,6 +101,7 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 			Unit.IsShiny = Info["Shiny"]
 			Unit.Owner = player
 			newUnit:SetAttribute("Owner",player.Name)
+			warn("THE UNITS DATA ----> ", Units[Info.Name])
 			
 			self.Units[newUnit:GetAttribute("Id")] = Unit
 			--Unit.Moneyspent += (Units[Info.Name].Price * .25) 
@@ -124,6 +125,7 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 end
 
 function UnitService.Client:GetUnitInfo(_,UnitId)
+	warn("MAN IS THE KING ---> ",self.Server.Units[UnitId])
 	return self.Server.Units[UnitId]
 end
 
@@ -223,6 +225,8 @@ function UnitService:KnitStart()
 		Params.FilterType = Enum.RaycastFilterType.Include
 		Params.FilterDescendantsInstances = { Room.Path,Room.Units }
 		
+
+
 		if Price and playerUnits[player.Name][Data.Name] and Cash.Value >= Price and PlacementAmount.Value < MatchFolder:GetAttribute("MaxPlacement") and
 			(not unitAmount[player.Name][Data.Name] 
 			or unitAmount[player.Name][Data.Name] < Units[Data.Name].MaxPlacement) then --- Check How many of this unit you can place and total amount

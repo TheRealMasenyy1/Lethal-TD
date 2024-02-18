@@ -150,6 +150,7 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 	local list = {}
 	local InputCleaner = Maid.new()
 	local LegsOffset = 1.15 -- So that the legs don't clip the ground
+	local MaxPlacementAmount = player:FindFirstChild("PlacementAmount")
 	
 	local function onDescendantAdded(descendant)
 		if descendant:IsA("BasePart") then
@@ -223,12 +224,16 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 			Inputs.Position = UDim2.new(0,Mouse.X + 20,0,Mouse.Y + (Inputs.AbsoluteSize.Y / 2))
 		end))
 		
-		InputCleaner:GiveTask(UserInputService.TouchTapInWorld:Connect(function()
-			if PhoneSelectedUnit then
-				Placed = true
-				--warn("TAPPED IN THE WORLD")
-			end
-		end))
+		-- InputCleaner:GiveTask(UserInputService.TouchTapInWorld:Connect(function(processedByUI)
+		-- 	if processedByUI then
+		-- 		return
+		-- 	end
+
+		-- 	if PhoneSelectedUnit and canPlace then
+		-- 		Placed = true
+		-- 		--warn("TAPPED IN THE WORLD")
+		-- 	end
+		-- end))
 		
 		local function PlaceParticle(CFRAME : CFrame ,Color : Color3)
 			
@@ -266,7 +271,7 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 			local ray = Ray.new(unitRay.Origin, unitRay.Direction * LENGTH)
 			local hitPart, worldPosition = workspace:FindPartOnRay(ray)
 
-			if hitPart then
+			if hitPart and canPlace then
 				PhonePosition = worldPosition
 				TargetColor = hitPart.Color
 				Placed = true
@@ -274,7 +279,7 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 			end
 		end
 
-		UserInputService.TouchTapInWorld:Connect(GetPosition)
+		InputCleaner:GiveTask(UserInputService.TouchTapInWorld:Connect(GetPosition))
 		
 		InputCleaner:GiveTask(ActionFrame.Cancel.Activated:Connect(function()
 			Cancel = true
@@ -402,7 +407,7 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 			task.wait()
 		end
 		
-		----warn("THE PRESS BOOLEAN IS: ---> ", Placed)
+		warn("THE PRESS BOOLEAN IS: ---> ", Placed, " ALSO THE MAXPLACEMENT --->", MaxPlacementAmount.Value )
 		
 		if Placed and canPlace then
 			local Distance = (SpawnSpot.Position - player.Character.HumanoidRootPart.Position).Magnitude
@@ -412,10 +417,13 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 				Shortcut:PlaySound("Place")
 				PlaceParticle(SpawnSpot,TargetColor)
 				UnitService.Place:Fire({Spot = SpawnSpot, Name = newUnit.Name, Floor = MatchFolder.Parent.Name, Room = MatchFolder.Name})				
+				if MaxPlacementAmount.Value >= MatchFolder:GetAttribute("MaxPlacement") then
+					self:Notify(`You have reached the max Placement of {MatchFolder:GetAttribute("MaxPlacement")} Units`, Color3.fromRGB(255,0,0))
+				end
 			else
 				self:Notify(`Unit place to far away`,Color3.fromRGB(255,0,0))
-			end
-		end
+			end	
+		end	
 		
 		UnitSelected = false
 		Cancel = false
@@ -425,7 +433,7 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 		
 		Mouse.TargetFilter = workspace.Detectors
 		
-		InputCleaner:Destroy()
+		InputCleaner:DoCleaning()
 		if newUnit then 
 			newUnit:Destroy() 
 		end
@@ -446,7 +454,8 @@ function UnitController:GetUpgrades(Unit, StatsFrame, Level : number, UpgradeDat
 	end
 	
 	if TheUnitsData then
-		ActionFrame.Sell.Content.Earn.Text = "+"..TheUnitsData.Moneyspent	
+		warn("HERE IS THE DATA INFO ---> ", TheUnitsData)
+		ActionFrame.Sell.Content.Earn.Text = "+" .. (TheUnitsData.Moneyspent) or (UpgradeData[0].Cost)	
 	end
 	
 	for _,Frames in pairs(List:GetChildren()) do
@@ -528,6 +537,14 @@ function UnitController:OpenInteraction(Unit)
 	local UnitInfo = UpgradeUI:WaitForChild("UnitInfo")
 	local UpgradeInfo = UpgradeUI:WaitForChild("UpgradeInfo")
 	
+	local function DisableOtherDetector(Ignore)
+		for _,Detectors in pairs(workspace.Detectors:GetChildren()) do
+			if Detectors.Name ~= Ignore then
+				Detectors.Transparency = 1
+			end
+		end
+	end
+
 	if Detector and player.Character:FindFirstChild("HumanoidRootPart") and not UnitSelected then
 		local UnitName = UnitInfo:WaitForChild("UnitName")
 		local UnitInfoContainer = UnitInfo:WaitForChild("Container")
@@ -608,6 +625,7 @@ function UnitController:OpenInteraction(Unit)
 				UpgradeInputs = Maid.new()
 				--UnitInfoContainer.UnitName.Text = EntityInfo
 				
+				DisableOtherDetector()
 				Detector.Transparency = 0
 				
 				SetLevelUI(UnitInformation)
@@ -648,10 +666,11 @@ function UnitController:OpenInteraction(Unit)
 					ActionFrame.Sell.Visible = true
 					ActionFrame.Upgrade.Visible = true
 					ActionFrame.Targeting.Visible = true
+					ActionFrame.Targeting.Content.Mode.Text = `[ {UnitInformation.Targeting} ]`
 
 					if UnitInformation.Level >= Upgrades then 
 						ActionFrame.Upgrade.Visible = false
-					elseif Unit:GetAttribute("UnitType") == "Buff" then
+					elseif Unit:GetAttribute("UnitType") == "Buff" or Unit:GetAttribute("UnitType") == "Farm" then
 						ActionFrame.Targeting.Visible = false
 					end
 				
@@ -1033,6 +1052,7 @@ function UnitController:KnitStart()
 	MatchService = Knit.GetService("MatchService")
 	UnitService = Knit.GetService("UnitService")
 	local ProfileService = Knit.GetService("ProfileService")
+	local MaxPlacementAmount = player:FindFirstChild("PlacementAmount")
 	local InputLayout = {} -- This holds the local player units
 	
 	local function GetInfo(Name,UnitInfo) -- Temp function
@@ -1056,14 +1076,6 @@ function UnitController:KnitStart()
 		end
 	end
 	
-	local V = {
-		[1] = { Unit = "FireSpider"};
-		[2] = { Unit = "CosmicSpider"};	
-		[3] = { Unit = "Guardian"};	
-		[4] = { Unit = "BoomboxPilot"};
-		[5] = { Unit = "Spider"};
-	}
-	
 	ProfileService:OnProfileReady():andThen(function() -- Check if the player really has the unit in the server
 		local EquippedUnits = ProfileService:Get("Equipped")
 
@@ -1077,6 +1089,12 @@ function UnitController:KnitStart()
 			
 			self:ApplyImages(ToolbarUI,InputLayout)
 		end)
+	end)
+
+	MaxPlacementAmount.Changed:Connect(function()
+		if MaxPlacementAmount.Value >= MatchFolder:GetAttribute("MaxPlacement") then
+			self:Notify(`You have reached the max Placement of {MatchFolder:GetAttribute("MaxPlacement")} Units`, Color3.fromRGB(255,0,0))
+		end
 	end)
 
 	PlacementAllowed.Changed:Connect(function()

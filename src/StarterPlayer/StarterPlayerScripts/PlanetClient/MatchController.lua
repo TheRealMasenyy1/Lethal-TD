@@ -466,7 +466,9 @@ function MatchController:KnitStart()
 	end)
 
 	MatchService.PlayAnimation:Connect(function(Id,OriginalName,AnimationValue,FloorName)
-		self:PlayAnimation(Id,EntityInfo[OriginalName][AnimationValue],FloorName)
+		local _,_ = pcall(function()
+			self:PlayAnimation(Id,EntityInfo[OriginalName][AnimationValue],FloorName)
+		end)
 	end)	
 	
 	MatchService.DamageIndicator:Connect(function(Entity,_)

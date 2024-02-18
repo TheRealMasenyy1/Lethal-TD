@@ -1,48 +1,50 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local UnitManager = require(ReplicatedStorage.Resources.UnitManager)
 local EntityInfo = require(ReplicatedStorage.SharedPackage.Animations)
 
-local Hoard = {}
-Hoard.__index = Hoard
-setmetatable(Hoard,UnitManager)
+local UnitManager = require(ReplicatedStorage.Resources.UnitManager)
+
+local Pilot = {}
+Pilot.__index = setmetatable(Pilot,UnitManager)
 
 
-function Hoard.Setup(Unit)
+function Pilot.Setup(Unit)
 	local self = UnitManager.new(Unit)
-	setmetatable(self,Hoard)
+	setmetatable(self,Pilot)
 	
 	self.Animations = {
-		Attack = self:LoadAnimation(EntityInfo["Hoard"].Attack);
-		Idle = self:LoadAnimation(EntityInfo["Hoard"].Idle);
+		Attack = self:LoadAnimation(EntityInfo["Pilot"].Attack);
+		Idle = self:LoadAnimation(EntityInfo["Pilot"].Idle);
 	}
+	
+	self.AttackSound = self:LoadSound(EntityInfo["Pilot"].Sound)
+	
 	--- Empty Constructor
 	return self
 end
 
-function Hoard:Attack()
-
+function Pilot:Attack()
+	
 	if not self.InCooldown then --- If not in Cooldown Attack
 		local TargetHealth = self.Target:GetAttribute("Health")
-
+		
 		self.Animations.Attack:Play()
-		self.Animations.Attack.Looped = false
+		self.AttackSound:Play()
+		
 		self.Target:SetAttribute("Health", TargetHealth - self.Damage)
 		--self.Target.Humanoid:TakeDamage(self.Damage)
 
 		task.spawn(function()
 			self:SetCooldown()
 		end)
-
-		task.delay(self.Animations.Attack.Length,function()
-			self.Animations.Attack:Stop()
-		end)
+		
+		task.wait(self.Animations.Attack.Length)
+		self.Animations.Attack:Stop()
 	else
 		--warn("[ UNIT ] - IS IN COOLDOWN....")
 	end 
 end
 
-function Hoard:Run()
+function Pilot:Run()
 	self.Animations.Idle:Play()
 
 	self:OnZoneTouched(function(Enemy)
@@ -50,4 +52,4 @@ function Hoard:Run()
 	end)
 end
 
-return Hoard
+return Pilot	

@@ -13,7 +13,7 @@ function Rocket.Setup(Unit)
 	
 	self.Animations = {
 		Land = self:LoadAnimation(EntityInfo["Rocket"].Land);
-		TakeOff = self:LoadAnimation(EntityInfo["Rocket"].Attack);
+		Attack = self:LoadAnimation(EntityInfo["Rocket"].Attack);
 		Idle = self:LoadAnimation(EntityInfo["Rocket"].Idle);
 	}
 	
@@ -23,36 +23,58 @@ function Rocket.Setup(Unit)
 	return self
 end
 
-function Rocket:Attack()
+function Rocket:Attack(Owner)
 	
 	if not self.InCooldown then --- If not in Cooldown Attack
-		self.Animations.Land.Looped = false
 		
-		self.Animations.TakeOff:Play()
-		self.AttackSound:Play()
-		
-		--self.Target:SetAttribute("Health", TargetHealth - self.Damage)
-		--self.Target.Humanoid:TakeDamage(self.Damage)
+		self.Unit.Plane.Transparency = 0
+
+		for _,player in pairs(game.Players:GetPlayers()) do
+			local Cash = player:FindFirstChild("Cash")
+
+			if Cash and player.Name == Owner then
+				Cash.Value += self.Damage --- This turns into profit for this unit
+				warn("Gave the player this amount ---> ", self.Damage)
+			end
+		end
 
 		task.spawn(function()
 			self:SetCooldown()
-		end)
-		
-		task.wait(self.Animations.TakeOff.Length)
-		self.Animations.Land:Play()
-		self.Animations.TakeOff:Stop()
-	else
-		--warn("[ UNIT ] - IS IN COOLDOWN....")
+		end)		
 	end 
 end
 
 function Rocket:Run()
+	self.Detector = self:CreateDetector(self.Unit,self.Range)
+	local CurrentWave = workspace:FindFirstChild("CurrentWave")
+	
 	self.Animations.Idle:Play()
 	
-	while self.IsActive do
-		self:Attack()
-		task.wait()
+	if CurrentWave then
+		local LastWave = CurrentWave.Value
+		local Owner = self.Unit:GetAttribute("Owner")
+		
+		CurrentWave.Changed:Connect(function()
+			if CurrentWave.Value > LastWave and self.IsActive then
+				LastWave = CurrentWave.Value
+				self.Animations.Land:Play()
+				
+				self:Attack(Owner) -- giving money
+
+
+				task.delay(self.Animations.Land.Length,function()
+					self.Animations.Land:Stop()	
+					self.Unit.Plane.Transparency = 1
+				end)
+				-- self.Animations.TakeOff:Stop()
+			end
+		end)
 	end
+
+	-- while self.IsActive do
+		-- self:Attack()
+		task.wait()
+	-- end
 end
 
 return Rocket	

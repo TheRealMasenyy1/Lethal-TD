@@ -6,24 +6,43 @@ local AdminService = Knit.CreateService { Name = "AdminService", Client = {}}
 local Access = { 92260968 }
 
 AdminService.Client.GrantAccess = Knit.CreateSignal()
-AdminService.Client.PropertyAccess = Knit.CreateSignal()
+AdminService.Client.AccessCommands = Knit.CreateSignal()
 
+function HasAccess(player)
+    local AccessToCommands = table.find(Access,player.UserId)
+
+    if AccessToCommands then
+        return true
+    else
+        player:Kick("You have been Flagged and will be investigated")
+    end
+end
+
+function AdminService.Client:GrantAccess(player)
+    local GiveAccess = HasAccess(player)
+    return GiveAccess
+end
+
+function AdminService.Client:SelectAndDisplayAttributs(player,Target : Model)
+    local GiveAccess = HasAccess(player)
+
+    if GiveAccess then
+        local Attributes = Target:GetAttributes()
+        return Attributes
+    end
+
+    return warn("Can't find the Target")
+end
 
 
 function AdminService:KnitStart()
-
-    self.Client.GrantAccess:Connect(function(player)
-        local HasAccess = table.find(Access,player.UserId)
-
-        if HasAccess then
-            --- Do something
-            
-        else
-            --- ADD HIM TO DATASTORE
-            player:Kick("YOU HAVE BEEN FLAGGED AND WILL BE INVESTIGATED") 
-        end
-    end)
-    
+    -- self.Client.AccessCommands:Connect(function(player)
+    --     local HasAccess = HasAccess(player)
+        
+    --     if HasAccess then
+    --         --- Fire Commands
+    --     end
+    -- end)  
 end
 
 function AdminService:KnitInit()

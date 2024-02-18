@@ -16,18 +16,19 @@ UnitManager.__index = UnitManager
 function UnitManager.new(Unit)
 	local DefaultStats = Units[Unit.Name]
 	local self = setmetatable({},UnitManager)
-	
+
+	-- warn("WE PLACE THIS UNIT HERE ---> ", DefaultStats)
 	self.Unit = Unit
 	self.Name = Unit.Name
 	self.Owner = nil
 	self.Upgrades = DefaultStats.Upgrades
-	self.Moneyspent = DefaultStats.Price * .5 -- The money spent on this unit
 	self.Level = 0
 	self.Range = self.Upgrades[self.Level].Range;
 	self.Cooldown = self.Upgrades[self.Level].Cooldown;
 	self.Damage = self.Upgrades[self.Level].Damage or self.Upgrades[self.Level].Profit or self.Upgrades[self.Level].Slowness or self.Upgrades[self.Level].Buff;
 	self.DefaultDamage = self.Damage --- This is the damage before gettings a buff
 	self.Tags = self.Upgrades.Tags
+	self.Moneyspent = (DefaultStats.Price * .5) or (self.Upgrades[0].Cost * .5) -- The money spent on this unit
 	self.IsShiny = false
 	self.Detector = nil
 	self.Target = nil
@@ -323,8 +324,6 @@ function UnitManager:Burn(Target,burnTime : number,Type : string)
 				particle:Destroy()
 			end
 		end)
-	else
-		
 	end
 end
 
@@ -383,7 +382,7 @@ function UnitManager:Upgrade(player)
 							end
 							self.DefaultDamage = if StatName == "Damage" then StatValue else self.DefaultDamage --- If there is any damage error this is the cause							
 							self[StatName] = StatValue
-						elseif StatName == "Buff" or StatName == "Slowness" then
+						elseif StatName == "Buff" or StatName == "Slowness" or StatName == "Profit"then
 							self["Damage"] = StatValue
 						end
 					end
@@ -398,7 +397,7 @@ function UnitManager:Upgrade(player)
 					self.Level += 1
 					Cash.Value -= Cost
 					--self.Moneyspent += (Cost * .25) 
-					
+					warn("THIS IS THE UPGRADE DATA ----> ", self)
 					return true,self
 				else
 					warn(self.Unit.Name, " Doesn't have a RootPart")
@@ -447,11 +446,18 @@ function UnitManager:GetTargets(RootPart)
 							table.insert(self.InsideZone,TargetData) -- If not add them inside the table
 						end
 					end				
+				else
+					if Character and not game.Players:GetPlayerFromCharacter(Character) then
+						local Id = Character:GetAttribute("Id")
+						
+						self:RemoveTarget(Id)
+						self.Target = nil					
+					end
 				end
 			else
 				if Character and not game.Players:GetPlayerFromCharacter(Character) then
 					local Id = Character:GetAttribute("Id")
-					----warn("[ INFO ] - THE TARGET --> ", Id, " HAS LEFT THE ATTACKZONE! ")				
+					
 					self:RemoveTarget(Id)
 					self.Target = nil					
 				end
@@ -492,7 +498,7 @@ function UnitManager:OnZoneTouched(Attackfunc) -- Check for Attacker inside the 
 		RootPart = self.Unit:FindFirstChild("HumanoidRootPart") or self.Unit:FindFirstChild("RootPart")
 		if RootPart then
 			self:GetTargets(RootPart)
-			local Target = self.Target or self:DecideTarget() -- if self.Target and #self.Target:GetChildren() > 0 then 
+			local Target = self:DecideTarget() -- if self.Target and #self.Target:GetChildren() > 0 then 
 			
 			if Target and Target:FindFirstChild("RootPart") then
 				self.Target = Target
