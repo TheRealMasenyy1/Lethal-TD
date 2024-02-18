@@ -56,8 +56,8 @@ local Rewards = {
                 Value = 350
             },
         [200] = {
-                Name = "Exp";
-                Value = 250
+                Name = "MasterTank";
+                Value = "Unit"
             },
     }
 }
@@ -69,6 +69,10 @@ function RewardService:GiveReward(player,MapName,CurrentWave)
             QuestService:AddEXP(player,Reward.Value)
         elseif Reward.Name == "Scrap" then
             GameService:RewardScrap(player,Reward.Value)
+        elseif Reward.Name == "Gold" then
+             ProfileService:Update(player, "Gold", function(Gold)
+                return Gold + Reward.Value
+            end)           
         else
             local unit = GlobalDatastoreService:CreateUnit(Reward.Name)
             ProfileService:Update(player, "Inventory", function(inventory)

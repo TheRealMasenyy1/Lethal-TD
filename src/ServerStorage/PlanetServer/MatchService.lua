@@ -776,11 +776,11 @@ function MatchService:GenerateWave(EntityList, Room_Difficulty, Spawns : number)
 			Enemy = "Tank",
 			HP = (BossHealth * 2),
 			Priority = 1.05, -- Boss should always be last
-			Speed = 4,
+			Speed = math.random(1,5),
 			IsBoss = true,
 		})
 
-		BossHealth = math.floor(BossHealth * 1.5)
+		BossHealth = math.floor(BossHealth * 1.25)
 	end
 
 	for Entity,Priority in pairs(WaveList) do
@@ -1520,17 +1520,17 @@ function MatchService:GetPlayableMap()
 		Autopick()
 	end
 
-	warn("THIS IS WITH THE VOTES ACCOUNTED ---> ", highest, mapWithmostPlayer)
+	-- warn("THIS IS WITH THE VOTES ACCOUNTED ---> ", highest, mapWithmostPlayer)
 	
 	--warn("THE NEW SORTED TABLE",)
 	
-	for mapName,info in pairs(playerHasMap) do
-		print("------ ", mapName , " ------")
-		for name, diff in pairs(info) do
-			print(name,": ", diff)
-		end
-		print("------------------------------")
-	end
+	-- for mapName,info in pairs(playerHasMap) do
+	-- 	print("------ ", mapName , " ------")
+	-- 	for name, diff in pairs(info) do
+	-- 		print(name,": ", diff)
+	-- 	end
+	-- 	print("------------------------------")
+	-- end
 
 	if #game.Players:GetChildren() <= 1 then
 		local LastMap = #mapWithmostPlayer

@@ -50,7 +50,7 @@ local Selected = {
 local IntermissionController = Knit.CreateController { Name = "IntermissionController"; }
 
 local MapImage = {
-	["Experimentation"] = "rbxassetid://16216878734",
+	["Experimentation Inside"] = "rbxassetid://16216878104",
 	["Mansion"] = "rbxassetid://16216877287",
 	["Rend"] = "rbxassetid://16216876750",
 	["Vow"] = "rbxassetid://16216876222",

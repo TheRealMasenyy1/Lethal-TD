@@ -8,13 +8,13 @@ Knit.Shared = game:GetService("ReplicatedStorage"):WaitForChild("Common")
 if game.PlaceId ~= PlaceIds.Update then
 	Knit.AddServicesDeep(game:GetService("ServerStorage"):WaitForChild("Server"):WaitForChild("Services"):WaitForChild("Global"))
 end
-if game.PlaceId == PlaceIds.Planet then
+if game.PlaceId == PlaceIds.Planet or game.PlaceId == PlaceIds.PlanetEndless then
 	Knit.AddServicesDeep(game:GetService("ServerStorage"):WaitForChild("PlanetServer"))
 end
 -- if game.PlaceId == 15485926725 then -- Testing Lobby
 -- 	Knit.AddServicesDeep(game:GetService("ServerStorage"):WaitForChild("Server"):WaitForChild("Services"):WaitForChild("TestingLobby"))
 -- end
-Knit.AddServicesDeep(game:GetService("ServerStorage"):WaitForChild("Server"):WaitForChild("Services"):WaitForChild(PlaceIds[game.PlaceId]))
+Knit.AddServicesDeep(game:GetService("ServerStorage"):WaitForChild("Server"):WaitForChild("Services"):WaitForChild(if PlaceIds[game.PlaceId] == "PlanetEndless" then "Planet" else PlaceIds[game.PlaceId]))
 Knit.Start()
 
 if game.PlaceId ~= PlaceIds.Update then

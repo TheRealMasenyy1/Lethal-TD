@@ -10,11 +10,11 @@ Cmdr:SetActivationKeys({Enum.KeyCode.RightBracket})
 if game.PlaceId ~= PlaceIds.Update then
 	Knit.AddControllersDeep(script.Parent:WaitForChild("Client"):WaitForChild("Controllers"):WaitForChild("Global"))
 end
-if game.PlaceId == PlaceIds.Planet then
+if game.PlaceId == PlaceIds.Planet or game.PlaceId == PlaceIds.PlanetEndless then
 	Knit.AddControllersDeep(script.Parent:WaitForChild("PlanetClient"))
 end
 -- if game.PlaceId == 15485926725 then -- Testing Lobby
 -- 	Knit.AddControllersDeep(script.Parent:WaitForChild("Client"):WaitForChild("Controllers"):WaitForChild("TestingLobby"))
 -- end
-Knit.AddControllersDeep(script.Parent:WaitForChild("Client"):WaitForChild("Controllers"):WaitForChild(PlaceIds[game.PlaceId]))
+Knit.AddControllersDeep(script.Parent:WaitForChild("Client"):WaitForChild("Controllers"):WaitForChild(if PlaceIds[game.PlaceId] == "PlanetEndless" then "Planet" else PlaceIds[game.PlaceId]))
 Knit.Start()
