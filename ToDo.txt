@@ -17,3 +17,6 @@ Disable BossHealth ondeath [ Done ]
 --- Optimization ---
 While loop in UnitManager
 Better Controller Support
+
+--- Fix ----
+Add Detector part inside the intermission ship

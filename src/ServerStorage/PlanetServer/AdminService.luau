@@ -34,15 +34,34 @@ function AdminService.Client:SelectAndDisplayAttributs(player,Target : Model)
     return warn("Can't find the Target")
 end
 
+function AdminService:GetEntity(Id,Info : {Name : string, Value : any})
+    local Folder = workspace.Floors:GetDescendants()
+
+    for _,Models in pairs(Folder) do
+        local ModelId = Models:GetAttributes("Id")
+
+        if ModelId == Id then
+            return Models
+        end
+    end
+    return nil
+end
 
 function AdminService:KnitStart()
-    -- self.Client.AccessCommands:Connect(function(player)
-    --     local HasAccess = HasAccess(player)
+    self.Client.AccessCommands:Connect(function(player,Prompt,Args)
+        local Admin = HasAccess(player)
         
-    --     if HasAccess then
-    --         --- Fire Commands
-    --     end
-    -- end)  
+        if Admin then
+            if Prompt == "Change" then
+                local Entity = self:GetEntity(Args.Id,Args)
+
+                if Entity then
+                    Entity:SetAttribute(Args.Name,Args.Value)
+                end
+            end
+            --- Fire Commands
+        end
+    end)  
 end
 
 function AdminService:KnitInit()

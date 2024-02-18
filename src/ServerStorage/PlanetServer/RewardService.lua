@@ -48,7 +48,7 @@ local Rewards = {
                 Value = 300
             },
         [100] = {
-                Name = "SprayPilot";
+                Name = "MasterTank";
                 Value = "Unit"
             },
         [150] = {
@@ -56,7 +56,7 @@ local Rewards = {
                 Value = 350
             },
         [200] = {
-                Name = "MasterTank";
+                Name = "SprayPilot";
                 Value = "Unit"
             },
     }
