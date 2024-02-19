@@ -737,6 +737,7 @@ function MatchService:StartGame(MapInfo)
 	local players = #game.Players:GetChildren()
 	local Ship = workspace.Ship
 	local Detector : MeshPart = Ship.Detector
+	local RespawnDetector = Maid.new()
 	
 	--- OverLaps ----
 	local overlapsForShip = OverlapParams.new()
@@ -768,7 +769,9 @@ function MatchService:StartGame(MapInfo)
 	Health.Value = 100
 
 	local GetPartsInShip = workspace:GetPartsInPart(Detector,overlapsForShip)
-	
+	local IntermissionShip = workspace.SpawnLocaitionForPlayers
+	local IntermissionDetector = IntermissionShip.Detector
+
 	for i, part in pairs(GetPartsInShip) do
 		local HumanoidRootPart = part.Parent:FindFirstChild("HumanoidRootPart")
 		if HumanoidRootPart then
@@ -776,7 +779,17 @@ function MatchService:StartGame(MapInfo)
 			---Humanoid.WalkSpeed = 16
 		end
 	end
-	
+
+	RespawnDetector:GiveTask(IntermissionDetector.Touched:Connect(function(Hit)
+		local HumanoidRootPart = Hit.Parent:FindFirstChild("HumanoidRootPart")
+
+		if HumanoidRootPart and IsDefending.Value then
+			if HumanoidRootPart then
+				HumanoidRootPart.CFrame = Heart.CFrame
+			end
+		end
+	end))
+
 	--- DAMAGE DETECTOR ---
 	task.spawn(function()
 		while IsDefending.Value do
@@ -830,7 +843,6 @@ function MatchService:StartGame(MapInfo)
 			if Votes and table.find(SkippedSaved, player.Name) then
 				local playerPos = table.find(SkippedSaved, player.Name)
 				Votes.Value -= 1
-				--warn("Removing", player.Name, "from the skip list.")
 
 				task.delay(.5, function()
 					table.remove(SkippedSaved, playerPos)
@@ -838,26 +850,18 @@ function MatchService:StartGame(MapInfo)
 			elseif Votes and table.find(SkippedSaved, player.Name) == nil then
 				Votes.Value += 1
 				table.insert(SkippedSaved, player.Name)
-				--warn("Adding", player.Name, "to the skip list.")
 			end
 
 			lastPlayerAction[player] = currentTime  -- Update the last action timestamp for this player
-		else
-			-- If the cooldown has not expired, do nothing
-			--warn("Cooldown active for", player.Name)
 		end
 		
 		if CurrentWave.Value ~= #Waves and players == 1 then
 			Skipped.Value = autoSkip
-			--print("Solo player has voted to autoskip" , autoSkip)
 		elseif Votes and CurrentWave.Value ~= #Waves and players >= 1 and Votes.Value >= players then
 			-- Send the Skipwave signal back 
 			Skipped.Value = true
-			--print("WE HAVE STARTED SKIPPING")
-
 		elseif Votes and CurrentWave.Value ~= #Waves and players >= 1 and Votes.Value < players then
 			Skipped.Value = false
-			--print("WE HAVE STOPPED SKIPPING")
 		end
 	end
 	
@@ -892,6 +896,7 @@ function MatchService:StartGame(MapInfo)
 	end
 	
 	CurrentWave.Value = 1
+	self.Client.UpdateWave:FireAll({Wave = CurrentWave.Value,MaxWave = #Waves})
 	
 	while CurrentWave.Value < (#Waves + 1) and IsDefending.Value do  ---- WORKING ON THE REVIVE SYSTEM
 		local PlacementOrder,waitTable,_ = self:OrderByPriority(Waves[CurrentWave.Value])
@@ -939,13 +944,11 @@ function MatchService:StartGame(MapInfo)
 		end
 
 		if #MatchFolder.Entities:GetChildren() >= 0 and CurrentWave.Value == #Waves then
-			--warn("[ WAVES ] - LAST WAVE OF THE ENTITIES")
 			repeat 
 				task.wait(.1) 
 				checkForHealth() 
 			until #MatchFolder.Entities:GetChildren() <= 0 
 		elseif CurrentWave.Value ~= #Waves then
-			--warn("[ WAVES ] - NORMAL WAVE OF THE ENTITIES")
 			repeat 
 				task.wait(.1)
 				checkForHealth()  
@@ -957,27 +960,21 @@ function MatchService:StartGame(MapInfo)
 		end
 		
 		if lost_match.Value and not GameIsPaused then
-			--warn(" FAILED BECAUSE MATCH WAS LOST HERE ")
 			IsDefending.Value = false
 			break;
 		end
 		
 		if CurrentWave.Value > #Waves and not getBoss() then
-			--warn(" FAILED BECAUSE THE WAVE IS GREATER THA NTHE LIMIT ")
 			IsDefending.Value = false
 			break;
 		end
 		
 		self:GiveMoney(Room_Difficulty.CashPerWave,Room_Difficulty)
 		
-		local _,err = pcall(function()
+		local _,_ = pcall(function()
 			GameService:WaveCompleted()
 		end)
-		
-		if err then
-			--warn("[ COULD'T GIVE WAVECOMPLETION ] --> ", err)
-		end
-		
+	
 		while (TimeToSkip < DefaultWaitUntilNextWave) and Skipped.Value do
 			TimeToSkip += RunService.Heartbeat:Wait()
 		end
@@ -994,7 +991,8 @@ function MatchService:StartGame(MapInfo)
 	AllowPlacement.Value = false
 	WaveIsRunning = false
 	CountDownOnGoing = false
-	
+	RespawnDetector:DoCleaning()
+
 	if lost_match.Value then
 		return
 	end

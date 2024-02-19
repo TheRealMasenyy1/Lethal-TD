@@ -369,32 +369,26 @@ function IntermissionController:StartInter(ChapterData)
 			end)
 		end
 		
-		local function cooldown(Time : number)
-			local CountDown_tm = Time
-
-			task.spawn(function()
-				while CountDown_tm > 0 and IntermissionFrame.Visible do
-					CountDown_tm -= RunService.Heartbeat:Wait()
-
-					--print("COUNT DOWN UNTIL THE FIRST MAPS GETS LOADED")
-					if CountDown_tm <= 0 then
-						--MatchService.Play:Fire({},true)
-						warn("[ INFO ] - GAME HAS STARTED DUE TO COUNTDOWN")
-						break
-					end
-
-					Countdown.Text = string.format("%.1f",CountDown_tm)
-				end
-				
-				CountDown_tm = 10
-				Countdown.Text = CountDown_tm
- 				Countdown.Text = string.format("%.1f",CountDown_tm)
-			end)
-		end
-
-		MatchService.Start:Connect(function()
-			--cooldown(12)
-		end)
+		-- maid:GiveTask(Difficulty_Incr.Activated:Connect(function()
+		-- 	CurrentDifficulties += 1
+		-- 	--warn(Chapter,FloorName,Info,Info[FloorName])
+		-- 	if Chapter[Difficulties[CurrentDifficulties]] then
+		-- 		Difficulty_lb.Text = CurrentDifficulties
+		-- 		Selected.Difficulty = Difficulties[CurrentDifficulties]
+		-- 	else
+		-- 		CurrentDifficulties -= 1
+		-- 	end
+		-- end))
+		
+		-- maid:GiveTask(Difficulty_Decr.Activated:Connect(function()
+		-- 	CurrentDifficulties -= 1
+		-- 	if Chapter[Difficulties[CurrentDifficulties]] then
+		-- 		Difficulty_lb.Text = CurrentDifficulties
+		-- 		Selected.Difficulty = Difficulties[CurrentDifficulties]
+		-- 	else
+		-- 		CurrentDifficulties += 1
+		-- 	end
+		-- end))
 
 		-- Close intermission
 		MatchService.CloseIntermission:Connect(function()
@@ -462,59 +456,6 @@ function IntermissionController:StartInter(ChapterData)
 			Locked = Color3.fromRGB(255,0,0)
 		}
 		
-		
-		--[[
-		
-		function compareTables(...)
-			local inputTables = {...}
-			local commonValues = {}
-
-			for key, value in pairs(inputTables[1]) do
-				local minValue = value 
-
-				local isCommonValue = true
-				for i = 2, #inputTables do
-					local currentValue = inputTables[i][key]
-					if not currentValue or currentValue ~= value + 1 then
-						isCommonValue = false
-						break
-					end
-					if currentValue < minValue then
-						minValue = currentValue
-					end
-				end
-
-				if isCommonValue then
-					table.insert(commonValues, minValue)
-				end
-			end
-
-			return commonValues
-		end
-
-		local inputTable1 = {
-			[1] = 1,
-			[2] = 3,
-			[3] = 4,
-			[4] = 5
-		}
-
-		local inputTable2 = {
-			[1] = 2,
-		}
-
-		local inputTable3 = {
-			[1] = 2,
-			[2] = 1
-		}
-
-		local commonValues = compareTables(inputTable1, inputTable2,inputTable3)
-		
-		print(commonValues)
-		
-		--]]
-		
-	
 		ProfileService:OnProfileReady():andThen(function()
 			ProfileService:OnProfileReady():await()
 			MatchService:GetPlayersFloors():andThen(function(FloorData)
@@ -569,63 +510,6 @@ function IntermissionController:StartInter(ChapterData)
 				end
 	
 			end)
-			
-			-- FloorsCompleted:andThen(function(FloorData)
-			-- 	warn("[ FLOORS ] -->> ", FloorData) -- , #FloorData
-			-- 	if (FloorData == nil) or (FloorData and #FloorData <= 0) then
-			-- 		player:Kick("You need to rejoin due to your data being incorrect")
-			-- 	end
-			
-			-- 	self:ClearFloorFrame()
-				
-			-- 	for currentFloor = 1,#Floors_Folder:GetChildren() do
-			-- 		local AmountValue = #FloorData
-			-- 		local Name = "Floor"..currentFloor
-			-- 		local temp = FloorDisplay.Temp
-			-- 		local Unlocked = false
-
-			-- 		local newfloorbtn = temp.Floorbtn:Clone()
-			-- 		newfloorbtn.Nr.Text = currentFloor
-			-- 		newfloorbtn.Parent = FloorDisplay
-			-- 		newfloorbtn.Name = "Floor"..currentFloor
-			-- 		newfloorbtn.Visible = true
-
-			-- 		if currentFloor > (#FloorData) then
-			-- 			newfloorbtn.BackgroundColor3 = Result["Locked"]
-			-- 			newfloorbtn.UIStroke.Color = Result["Locked"]	
-			-- 		else
-			-- 			newfloorbtn.BackgroundColor3 = Result["Unlocked"]
-			-- 			newfloorbtn.UIStroke.Color = Result["Unlocked"]
-			-- 			Unlocked = true
-			-- 		end
-
-			-- 		if not Unlocked then
-			-- 			maid:GiveTask(newfloorbtn.Activated:Connect(function()
-			-- 				Shortcut:PlaySound("MouseClick")
-
-			-- 				local selectedFloor = SelectFloor(Name)
-			-- 				if UserInputService.GamepadEnabled then
-			-- 					GuiService:Select(selectedFloor[1].Parent)
-			-- 				end
-			-- 			end))					
-			-- 		end
-
-			-- 		maid:GiveTask(newfloorbtn.Activated:Connect(function()
-			-- 			Shortcut:PlaySound("MouseClick")
-
-			-- 			if not Unlocked then
-			-- 				StartGame_btn.Visible = false
-			-- 				VoteLabel.Visible = false
-			-- 				SelectFloor(Name,currentFloor,FloorData)
-			-- 			else
-			-- 				StartGame_btn.Visible = true
-			-- 				VoteLabel.Visible = true
-			-- 				SelectFloor(Name,currentFloor,FloorData)
-			-- 			end
-			-- 		end))
-			-- 	end
-
-			-- end)
 		end)
 		
 		-- CountDown until it starts

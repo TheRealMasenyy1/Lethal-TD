@@ -1,5 +1,3 @@
- 
-		
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local EntityInfo = require(ReplicatedStorage.SharedPackage.Animations)
 
@@ -24,26 +22,63 @@ function CosmicThumper.Setup(Unit)
 	return self
 end
 
+function CosmicThumper:Hitbox(Position : Vector3)
+	local Damaged = {}
+	local Detector = Instance.new("Part")
+	Detector.Size = Vector3.new(10,5,15)	
+	Detector.Position = Position
+	Detector.CFrame = self.Unit.RootPart.CFrame * CFrame.new(0,0,-((self.Range/2) * 1.1))
+	Detector.Transparency = 1
+	Detector.CanCollide = false
+	Detector.Anchored = true
+	Detector.Parent = self.Unit
+	
+	local Overlaps = OverlapParams.new()
+	Overlaps.FilterType = Enum.RaycastFilterType.Exclude
+	Overlaps.FilterDescendantsInstances = { self.Unit }
+	
+	local GetParts = workspace:GetPartBoundsInBox(Detector.CFrame,Detector.Size)
+	
+	for _,Parts in (GetParts) do
+		local Models_Key = Parts.Parent
+		
+		if Models_Key:IsA("Model") then
+			local Health = Models_Key:GetAttribute("Health")
+			
+			if Health and not Damaged[Models_Key.Name] then
+				Damaged[Models_Key.Name] = true
+				Models_Key:SetAttribute("Health",Health - self.Damage)
+			end
+		end
+	end
+	
+	task.delay(1,game.Destroy,Detector)
+	-- Detector:Destroy()
+end
+
+
 function CosmicThumper:Attack()
 	
 	if not self.InCooldown then --- If not in Cooldown Attack
-		local TargetHealth = self.Target:GetAttribute("Health")
-		
-		self.Animations.Attack:Play()
+		-- local TargetHealth = self.Target:GetAttribute("Health")
 		self.AttackSound:Play()
+		self.Animations.Attack:Play()
 		
-		self.Target:SetAttribute("Health", TargetHealth - self.Damage)
-		--self.Target.Humanoid:TakeDamage(self.Damage)
-
+		if self.Cooldown < 1 then
+			self.Animations.Attack:AdjustSpeed(1.2)
+		end
+		
+		self:Hitbox(self.Target.RootPart.Position)
 		task.spawn(function()
 			self:SetCooldown()
 		end)
-		
-		task.wait(self.Animations.Attack.Length)
-		self.Animations.Attack:Stop()
+
+		task.delay(self.Animations.Attack.Length,function()
+			self.Animations.Attack:Stop()	
+		end)
 	else
 		--warn("[ UNIT ] - IS IN COOLDOWN....")
-	end 
+	end
 end
 
 function CosmicThumper:Run()
