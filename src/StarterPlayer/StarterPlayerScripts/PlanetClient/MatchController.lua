@@ -73,7 +73,7 @@ function MatchController:StartGame()
 		SkipBtnLoaded = true
 		
 		BtnCleaner:GiveTask(SkipWave.Activated:Connect(function()
-			warn("THE SKIP BUTTON WAS PRESSED HERE ", AllowPlacement.Value)
+			-- warn("THE SKIP BUTTON WAS PRESSED HERE ", AllowPlacement.Value)
 			if not AllowPlacement.Value then return end
 			
 			if not PressedSkip then
@@ -131,13 +131,13 @@ function MatchController:StartGame()
 	
 	if #game.Players:GetChildren() > 1 then
 		local VotesValue = workspace:WaitForChild("Votes",30)
-		warn("Activated CHECK FOR THE VALUES --> ", VotesValue)
+		-- warn("Activated CHECK FOR THE VALUES --> ", VotesValue)
 
 		if VotesValue then 
 			VoteSkip.Visible = true
 			VoteSkip.TitleLabel.Text = VotesValue.Value.."/"..#game.Players:GetChildren()
 
-			warn("WARN IF THIS VOTES DO ANYTHING ---> ", VotesValue.Value)
+			-- warn("WARN IF THIS VOTES DO ANYTHING ---> ", VotesValue.Value)
 			VotesValue.Changed:Connect(function()
 				VoteSkip.TitleLabel.Text = VotesValue.Value.."/"..#game.Players:GetChildren()
 			end)
@@ -236,7 +236,7 @@ end
 function MatchController:GiveReward(Frame, Rewards)
 	--- THE FIRST TWO ARE EXCLUSIVE FOR MONEY AND EXP
 
-	warn("YOU WON SO THIS IS YOUR REWARDS")
+	-- warn("YOU WON SO THIS IS YOUR REWARDS")
 	Frame[1].Amount.Text = Rewards.Coins
 	Frame[2].Amount.Text = Rewards.Exp
 	
@@ -280,7 +280,7 @@ function MatchController:MatchEnded(Info)
 	IntermissionUI.Visible = true
 
 	-- Should display the rewards first
-	warn("THE UI SHOULD SHOW UP: ", Info)
+	-- warn("THE UI SHOULD SHOW UP: ", Info)
 	self:GiveReward(MainFrame,Info)
 	
 	local Tween = TweenService:Create(EndFrame,TweenInfo.new(.5),Prop)
@@ -485,7 +485,7 @@ function MatchController:KnitStart()
 		local HealthBar = HealthFrameForShip.Frame.bar 
 		IsDefending = false
 		
-		warn("[ ROOMINFO ] - ", RoomData)
+		-- warn("[ ROOMINFO ] - ", RoomData)
 		
 		if MaxPlacement then
 			
@@ -545,7 +545,7 @@ function MatchController:KnitStart()
 					Tween:Play()
 
 					if MatchCooldown.Value <= 0 then
-						warn("[ INFO ] - GAME HAS STARTED DUE TO COUNTDOWN")
+						-- warn("[ INFO ] - GAME HAS STARTED DUE TO COUNTDOWN")
 						StartGameFrame.Visible = false
 						IntermissionFrame.Visible = false
 						ToolbarUI.Visible = true

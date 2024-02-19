@@ -459,7 +459,7 @@ function IntermissionController:StartInter(ChapterData)
 		ProfileService:OnProfileReady():andThen(function()
 			ProfileService:OnProfileReady():await()
 			MatchService:GetPlayersFloors():andThen(function(FloorData)
-				print("PLAYER HAS LOADED HERE IS THE COMMONFLOORS ---> ",FloorData)
+				-- print("PLAYER HAS LOADED HERE IS THE COMMONFLOORS ---> ",FloorData)
 
 				self:ClearFloorFrame()
 				

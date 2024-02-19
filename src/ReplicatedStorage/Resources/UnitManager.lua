@@ -259,7 +259,7 @@ end
 function UnitManager:SlowUnit(Target,burnTime : number,Type : string) --- Needs fixing
 	--local Particle = Particles:FindFirstChild(Type)
 	local t = 0
-	warn("TRYING TO SLOW UNIT ",Target.Name, self.Damage , Target:GetAttribute("Speed"))
+	-- warn("TRYING TO SLOW UNIT ",Target.Name, self.Damage , Target:GetAttribute("Speed"))
 	task.spawn(function()
 		local TargetSpeed = Target:GetAttribute("Speed")
 		local Storage = {}
@@ -289,7 +289,7 @@ function UnitManager:SlowUnit(Target,burnTime : number,Type : string) --- Needs 
 			end
 		end	
 
-		warn("Effect is completed")
+		-- warn("Effect is completed")
 		Target:SetAttribute("Speed",TargetSpeed)
 	end)
 end
@@ -400,8 +400,8 @@ function UnitManager:Upgrade(player)
 					--self.Moneyspent += (Cost * .25) 
 					
 					return true,self
-				else
-					warn(self.Unit.Name, " Doesn't have a RootPart")
+				-- else
+					-- warn(self.Unit.Name, " Doesn't have a RootPart")
 				end
 			else
 				return false,self -- Could not afford it		

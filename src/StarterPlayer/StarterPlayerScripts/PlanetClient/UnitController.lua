@@ -630,7 +630,7 @@ function UnitController:OpenInteraction(Unit)
 						local Model = WorldModel:FindFirstChildWhichIsA("Model")
 
 						if Model then
-							print("THE MODEL ---> ", Model.Name)
+							-- print("THE MODEL ---> ", Model.Name)
 							
 							local Animation = self:PlayAnimation(Model,EntityInfo[Model.Name].Idle)
 							Animation:Play()
@@ -719,7 +719,7 @@ function UnitController:PlayAnimation(Unit,Animation)
 end
 
 function UnitController:ApplyImages(ToolbarUI,EquippedUnits) -- This shouldn't actually be here, but it's just for testing
-	print("[ INFO ] - THE EQUIPPED TABLE --> ", EquippedUnits)
+	-- print("[ INFO ] - THE EQUIPPED TABLE --> ", EquippedUnits)
 	
 	for _,Btn in pairs(ToolbarUI:GetChildren()) do
 		if Btn:IsA("ImageButton") and EquippedUnits[Btn.Name] then
@@ -744,7 +744,7 @@ function UnitController:ApplyImages(ToolbarUI,EquippedUnits) -- This shouldn't a
 					local Model = WorldModel:FindFirstChildWhichIsA("Model")
 
 					if Model then
-						print("[ INFO ] - PLAYING ANIMATION FOR ", EntityInfo ,Model.Name)
+						-- print("[ INFO ] - PLAYING ANIMATION FOR ", EntityInfo ,Model.Name)
 						local Animation = self:PlayAnimation(Model,EntityInfo[Model.Name].Idle)
 						Animation:Play()
 					end				
@@ -756,7 +756,7 @@ function UnitController:ApplyImages(ToolbarUI,EquippedUnits) -- This shouldn't a
 			end
 			
 			Btn.SelectionGained:Connect(function(testbtn)
-				print("THE SELECTION OF THIS UI ---> ", testbtn)
+				-- print("THE SELECTION OF THIS UI ---> ", testbtn)
 				CurrentGamePadSelection = Btn.Name
 			end)
 			
@@ -1027,7 +1027,7 @@ function UnitController:GetInputs(EquippedUnits)
 		
 		
 	end))
-	print("[ LOG ] - AWAITING THE INPUTS")
+	-- print("[ LOG ] - AWAITING THE INPUTS")
 end
 
 function UnitController:KnitStart()
@@ -1056,14 +1056,6 @@ function UnitController:KnitStart()
 			end
 		end
 	end
-	
-	local V = {
-		[1] = { Unit = "FireSpider"};
-		[2] = { Unit = "CosmicSpider"};	
-		[3] = { Unit = "Guardian"};	
-		[4] = { Unit = "BoomboxPilot"};
-		[5] = { Unit = "Spider"};
-	}
 	
 	ProfileService:OnProfileReady():andThen(function() -- Check if the player really has the unit in the server
 		local EquippedUnits = ProfileService:Get("Equipped")

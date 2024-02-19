@@ -536,7 +536,7 @@ function MatchService:GameEnded(Info)
 			end
 			
 			if Answer then
-				print("[ THIS SHOULD BE FLAGGED AS A HACKER ]")
+				-- print("[ THIS SHOULD BE FLAGGED AS A HACKER ]")
 				HasResponed = false
 				sender:Kick("You have been flagged as a hacker")
 			end
@@ -1246,7 +1246,7 @@ function MatchService:GetPlayableMap()
 
 			local key = floor .. "_" .. difficulty  
 			
-			print("THE SCANNED DATA ----> ", data, TheTable)
+			-- print("THE SCANNED DATA ----> ", data, TheTable)
 			
 			if count[key] then
 				count[key] = count[key] + 1
@@ -1254,7 +1254,7 @@ function MatchService:GetPlayableMap()
 				count[key] = 1
 			end
 		end
-		print("THE COUNT ----> ", count)
+		-- print("THE COUNT ----> ", count)
 		return count
 	end
 
@@ -1480,13 +1480,13 @@ function MatchService:GetPlayableMap()
 	
 	--warn("THE NEW SORTED TABLE",)
 	
-	for mapName,info in pairs(playerHasMap) do
-		print("------ ", mapName , " ------")
-		for name, diff in pairs(info) do
-			print(name,": ", diff)
-		end
-		print("------------------------------")
-	end
+	-- for mapName,info in pairs(playerHasMap) do
+	-- 	print("------ ", mapName , " ------")
+	-- 	for name, diff in pairs(info) do
+	-- 		print(name,": ", diff)
+	-- 	end
+	-- 	print("------------------------------")
+	-- end
 
 	if #game.Players:GetChildren() <= 1 then
 		local LastMap = #mapWithmostPlayer
@@ -1512,9 +1512,9 @@ function MatchService:GetPlayableMap()
 		return mapWithmostPlayer[1]
 	else -- if map shore is equal		
 		
-		for _, Info in pairs(mapWithmostPlayer) do
-			print("THE INFO --> ", Info.Floor,Info.Difficulty)
-		end
+		-- for _, Info in pairs(mapWithmostPlayer) do
+		-- 	print("THE INFO --> ", Info.Floor,Info.Difficulty)
+		-- end
 		
 		mapWithmostPlayer[1]["Room"] = "Room1"
 		return mapWithmostPlayer[1]
@@ -1764,9 +1764,9 @@ function MatchService:KnitStart()
 		warn("THIS FIRED THANKS TO THE CLIENT", FindVotes)
 		
 		if FindVotes and not LatestVote[player.Name] then
-			print("WE FOUDN THE VALUE BUT NOTHING IS HAPPENING")
+			-- print("WE FOUDN THE VALUE BUT NOTHING IS HAPPENING")
 			FindVotes.Value += 1
-			print(FindVotes.Value)
+			-- print(FindVotes.Value)
 		end
 
 		if not SkipAllVotes then
