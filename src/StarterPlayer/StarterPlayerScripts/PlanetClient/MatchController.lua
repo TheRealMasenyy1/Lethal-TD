@@ -46,6 +46,7 @@ local CurrentWave = workspace.CurrentWave
 local SkipBtnLoaded = false
 local autoSkip = false
 local IsDefending = false
+local VoteStarted = false
 
 local MaxWave = 10
 local reviveId = 1754721725
@@ -276,7 +277,7 @@ function MatchController:MatchEnded(Info)
 	ToolbarUI.Visible = false
 	Content.Visible = false
 	--IntermissionFrame.Visible = false
-	
+	VoteStarted = false
 	UpgradeUI.Visible = false
 	EndFrame.Visible = true
 	IntermissionUI.Visible = true
@@ -623,20 +624,23 @@ function MatchController:KnitStart()
 		MatchService.SpawnAmount:Fire()
 	end)
 	--local GameStarted = false 
-	
 	StartGame_btn.Activated:Connect(function()
 		
-		if #game.Players:GetChildren() <= 1 then
-			StartGameFrame.Visible = false
-			IntermissionFrame.Visible = false
-			ToolbarUI.Visible = true
-			Money_lb.Visible = true
+		if not VoteStarted then
+			VoteStarted = true
+
+			if #game.Players:GetChildren() <= 1 then
+				StartGameFrame.Visible = false
+				IntermissionFrame.Visible = false
+				ToolbarUI.Visible = true
+				Money_lb.Visible = true
+			end
+			
+			MatchService.Start:Fire()
+			GuiService.SelectedObject = nil
+			GuiService:AddSelectionParent("Placement",ToolbarUI)
+			self:StartGame()
 		end
-		
-		MatchService.Start:Fire()
-		GuiService.SelectedObject = nil
-		GuiService:AddSelectionParent("Placement",ToolbarUI)
-		self:StartGame()
 	end)
 end
 

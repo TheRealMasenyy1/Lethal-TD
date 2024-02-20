@@ -398,7 +398,7 @@ function MatchService:SpawnEntity(Name : string, WaveInfo, Nodes) 	--- Get the e
 				end
 			end
 		
-		if Health > 0 then
+			if Health > 0 then
 				self.Client.DamageIndicator:FireAll(newEntity)	
 				
 				if WaveInfo["IsBoss"] and Health >= 0 then
@@ -825,7 +825,8 @@ function MatchService:StartGame(MapInfo)
 	local players = #game.Players:GetChildren()
 	local Ship = workspace.Ship
 	local Detector : MeshPart = Ship.Detector
-	
+	local RespawnDetector = Maid.new()
+
 	--- OverLaps ----
 	local overlapsForShip = OverlapParams.new()
 	overlapsForShip.FilterType = Enum.RaycastFilterType.Exclude
@@ -855,6 +856,8 @@ function MatchService:StartGame(MapInfo)
 	Health.Value = 100
 
 	local GetPartsInShip = workspace:GetPartsInPart(Detector,overlapsForShip)
+	local IntermissionShip = workspace.SpawnLocaitionForPlayers
+	local IntermissionDetector = IntermissionShip.Detector
 	
 	for i, part in pairs(GetPartsInShip) do
 		local HumanoidRootPart = part.Parent:FindFirstChild("HumanoidRootPart")
@@ -863,10 +866,20 @@ function MatchService:StartGame(MapInfo)
 			---Humanoid.WalkSpeed = 16
 		end
 	end
-	
+
+
+	RespawnDetector:GiveTask(IntermissionDetector.Touched:Connect(function(Hit)
+		local HumanoidRootPart = Hit.Parent:FindFirstChild("HumanoidRootPart")
+
+		if HumanoidRootPart and IsDefending.Value then
+			if HumanoidRootPart then
+				HumanoidRootPart.CFrame = Heart.CFrame
+			end
+		end
+	end))
+
 	--- DAMAGE DETECTOR ---
 	task.spawn(function()
-		
 		while IsDefending.Value do
 			local heartZone = workspace:GetPartsInPart(Heart,overlaps)
 			for _,Parts in pairs(heartZone) do

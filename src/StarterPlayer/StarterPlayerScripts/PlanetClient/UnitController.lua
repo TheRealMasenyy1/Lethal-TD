@@ -407,7 +407,7 @@ function UnitController:SelectPlaceUnit(SelectedUnit : UnitType)
 			task.wait()
 		end
 		
-		warn("THE PRESS BOOLEAN IS: ---> ", Placed, " ALSO THE MAXPLACEMENT --->", MaxPlacementAmount.Value )
+		-- warn("THE PRESS BOOLEAN IS: ---> ", Placed, " ALSO THE MAXPLACEMENT --->", MaxPlacementAmount.Value )
 		
 		if Placed and canPlace then
 			local Distance = (SpawnSpot.Position - player.Character.HumanoidRootPart.Position).Magnitude
@@ -454,7 +454,7 @@ function UnitController:GetUpgrades(Unit, StatsFrame, Level : number, UpgradeDat
 	end
 	
 	if TheUnitsData then
-		warn("HERE IS THE DATA INFO ---> ", TheUnitsData)
+		-- warn("HERE IS THE DATA INFO ---> ", TheUnitsData)
 		ActionFrame.Sell.Content.Earn.Text = "+" .. (TheUnitsData.Moneyspent) or (UpgradeData[0].Cost)	
 	end
 	

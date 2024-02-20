@@ -12,53 +12,65 @@ local ProfileService;
 local Rewards = {
     ["Experimentation Inside"] = {
         [10] = {
-                Name = "Scrap";
-                Value = 100
-            },
+            Name = "Scrap";
+            Value = 100
+        },
         [20] = {
-                Name = "Exp";
-                Value = 50
-            },
+            Name = "Exp";
+            Value = 50
+        },
         [30] = {
-                Name = "Scrap";
-                Value = 200
-            },
+            Name = "Scrap";
+            Value = 200
+        },
         [40] = {
-                Name = "Exp";
-                Value = 150
-            },
+            Name = "Exp";
+            Value = 150
+        },
         [50] = {
-                Name = "Gold";
-                Value = 5
-            },
+            Name = "Gold";
+            Value = 5
+        },
         [60] = {
-                Name = "Exp";
-                Value = 200
-            },       
+            Name = "Exp";
+            Value = 200
+        },       
         [70] = {
-                Name = "Scrap";
-                Value = 250
-            },
+            Name = "Scrap";
+            Value = 250
+        },
         [80] = {
-                Name = "Gold";
-                Value = 10
-            },
+            Name = "Gold";
+            Value = 10
+        },
         [90] = {
-                Name = "Exp";
-                Value = 300
-            },
+            Name = "Exp";
+            Value = 300
+        },
         [100] = {
-                Name = "MasterTank";
-                Value = "Unit"
-            },
+            Name = "MasterTank";
+            Value = "Unit"
+        },
+        [120] = {
+            Name = "Scrap",
+            Value = 100
+        },
         [150] = {
-                Name = "Scrap";
-                Value = 350
-            },
+            Name = "Scrap";
+            Value = 350
+        },
+        [180] = {
+            Name = "Scrap",
+            Value = 200,
+        },
         [200] = {
-                Name = "SprayPilot";
-                Value = "Unit"
-            },
+            Name = "SprayPilot";
+            Value = "Unit"
+        },
+        [250] = {
+            Name = "Scrap",
+            Value = 550,
+        }
     }
 }
 

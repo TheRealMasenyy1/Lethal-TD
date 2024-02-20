@@ -145,45 +145,42 @@ function UnitManager:DecideTarget()
 		if self.Priority.First then
 			if #self.InsideZone[1].Character:GetChildren() <= 0 then  table.remove(self.InsideZone,1) end
 			
-			--self.SetTargetingMode.Text = "TargetingMode: ".."First"
 			self.Targeting = "First"
 			return self.InsideZone[1].Character
 		elseif self.Priority.Weakest then
-			-- self.SetTargetingMode.Text = "TargetingMode: ".."Weakest"
 			self.Targeting = "Weakest"
+			local position = 1
 			local ChoosenTarget = {
 				Health = math.huge,
 				Target = nil
 			}
 
-			for _,Data in ipairs(self.InsideZone) do
+			for targetPos,Data in ipairs(self.InsideZone) do
 				if Data.Health <= ChoosenTarget.Health then
 					ChoosenTarget.Health = Data.Health
-					ChoosenTarget.Target = Data.Character
+					position = targetPos 
 				end
 			end
-			
-			--warn("[UNIT ] - THIS IS THE TARGET WITH THE LOWEST HEALTH")
-			return ChoosenTarget.Target
+				
+			return self.InsideZone[position].Character or self.InsideZone[1].Character
 		elseif self.Priority.Strongest then
-			--self.SetTargetingMode.Text = "TargetingMode: ".."Strongest"
 			self.Targeting = "Strongest"
-
+			local position = 1;
 			local ChoosenTarget = {
 				Health = 0,
 				Target = nil
 			}
 			
-			for _,Data in ipairs(self.InsideZone) do
+			for targetPos,Data in ipairs(self.InsideZone) do
 				if Data.MaxHealth and Data.MaxHealth >= ChoosenTarget.Health then
 					ChoosenTarget.Health = Data.MaxHealth
-					ChoosenTarget.Target = Data.Character
+					position = targetPos
 				end
 			end
-			
-			return ChoosenTarget.Target
+		
+			return self.InsideZone[position].Character or self.InsideZone[1].Character
 		elseif self.Priority.Fastest then
-			if #self.InsideZone[1].Character:GetChildren() <= 0 then  table.remove(self.InsideZone,1) end
+			if #self.InsideZone[1].Character:GetChildren() <= 0 then table.remove(self.InsideZone,1) end
 			
 			--self.SetTargetingMode.Text = "TargetingMode: ".."First"
 			self.Targeting = "Fastest"
@@ -246,10 +243,14 @@ function UnitManager:BuffUnit(BuffInfo)
 				if (Unit:GetAttribute(name) and Unit:GetAttribute(name) < value) or not Unit:GetAttribute(name) then
 					Unit:SetAttribute(name,value)
 					self.Unit:SetAttribute("Buff",true)
-				-- elseif not Unit:GetAttribute(name) then
-				-- 	-- This sets the value it one doesn't exists
-				-- 	Unit:SetAttribute(name,value)
-				-- 	self.Unit:SetAttribute("Buff",true)
+				elseif Unit:GetAttribute(name) and Unit:GetAttribute("Shiny") then
+					if name == "Damage" then
+						local _,dec = math.modf(value)
+						local CurrentDamage = 1.3 -- This is the default value for shinies --Unit:GetAttribute(name)
+
+						Unit:SetAttribute(name,CurrentDamage + dec)
+						self.Unit:SetAttribute("Buff",true)
+					end
 				end
 			end
 		end
@@ -397,7 +398,7 @@ function UnitManager:Upgrade(player)
 					self.Level += 1
 					Cash.Value -= Cost
 					--self.Moneyspent += (Cost * .25) 
-					warn("THIS IS THE UPGRADE DATA ----> ", self)
+					-- warn("THIS IS THE UPGRADE DATA ----> ", self)
 					return true,self
 				else
 					warn(self.Unit.Name, " Doesn't have a RootPart")
@@ -470,17 +471,18 @@ end
 
 function UnitManager:GetBuffUnit()
 	local UnitsCollection = CollectionService:GetTagged("Units")
-
+	local foundBuffUnit = false
 	for _,Unit in pairs(UnitsCollection) do
 		local Distance = (Unit.PrimaryPart.Position - self.Unit.PrimaryPart.Position).Magnitude
 		
-		if (Unit:GetAttribute("Buff") and  Unit:GetAttribute("Distance") and Distance <= Unit:GetAttribute("Distance")) or self.Unit:GetAttribute("Shiny") then
+		if Unit.Name ~= self.Unit.Name and Unit:GetAttribute("Buff") and  Unit:GetAttribute("Distance") and Distance <= Unit:GetAttribute("Distance") then
+			foundBuffUnit = true
 			return true
 		end
 	end
 	
-	if self.Unit:GetAttribute("Shiny") then
-		return true
+	if not foundBuffUnit and self.Unit:GetAttribute("Shiny") then
+		return true,1.3
 	end
 	
 	return false
@@ -502,16 +504,16 @@ function UnitManager:OnZoneTouched(Attackfunc) -- Check for Attacker inside the 
 			
 			if Target and Target:FindFirstChild("RootPart") then
 				self.Target = Target
-				
+				local NearBuff,Value = self:GetBuffUnit()
 				local Position : Vector3 = Vector3.new(self.Target.RootPart.Position.X,RootPart:GetPivot().Position.Y,self.Target.RootPart.Position.Z)
 				
 				self.Unit:PivotTo(CFrame.lookAt(RootPart:GetPivot().Position,Position))
 
-				if not self:GetBuffUnit() then
+				if not NearBuff then
+					warn(" BOOST UNIT IS NOT CLOSE TO YOU ")
 					self.Damage = self.DefaultDamage
 				else
-					local Boosted = 1;
-					
+					local Boosted = 1;				
 					if self.Unit:GetAttribute("Damage") then
 						if self.Unit:GetAttribute("Damage") <= 0 then
 							Boosted = 1 
@@ -520,9 +522,13 @@ function UnitManager:OnZoneTouched(Attackfunc) -- Check for Attacker inside the 
 						end
 					end
 					
+					if self.Unit:GetAttribute("Shiny") and Value then -- if there is no buff unit and the Unit is a shiny then give default multiplier
+						self.Unit:SetAttribute("Damage",Value)
+						Boosted = Value
+					end
+
 					self.Damage = self.DefaultDamage * Boosted
 				end
-
 				Attackfunc() --- Calls the self:Attack inside each unit Class
 			else						
 				if Target then

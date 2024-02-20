@@ -13,8 +13,8 @@ function HasAccess(player)
 
     if AccessToCommands then
         return true
-    else
-        player:Kick("You have been Flagged and will be investigated")
+    -- else
+        -- player:Kick("You have been Flagged and will be investigated")
     end
 end
 

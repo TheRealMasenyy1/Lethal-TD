@@ -59,6 +59,7 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 	end
 	
 	if Unit_Model then
+
 		local newUnit = Unit_Model:Clone()
 		newUnit:PivotTo(Info.Spot)
 		newUnit:SetAttribute("Id",math.random(-10000,10000))
@@ -101,7 +102,6 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 			Unit.IsShiny = Info["Shiny"]
 			Unit.Owner = player
 			newUnit:SetAttribute("Owner",player.Name)
-			warn("THE UNITS DATA ----> ", Units[Info.Name])
 			
 			self.Units[newUnit:GetAttribute("Id")] = Unit
 			--Unit.Moneyspent += (Units[Info.Name].Price * .25) 
@@ -124,8 +124,8 @@ function UnitService:PlaceUnit(player, Info : PlaceInfo)
 	end
 end
 
+-- warn("MAN IS THE KING ---> ",self.Server.Units[UnitId])
 function UnitService.Client:GetUnitInfo(_,UnitId)
-	warn("MAN IS THE KING ---> ",self.Server.Units[UnitId])
 	return self.Server.Units[UnitId]
 end
 
@@ -235,7 +235,7 @@ function UnitService:KnitStart()
 			local IsOnPath = Shortcut.RayCast(Data.Spot.Position + Vector3.new(0,10,0),Vector3.new(0,-100,0), Params)
 
 			if Distance <= 60 and not IsOnPath then
-				Data["Shiny"] = playerUnits[player.Name][Data.Name]["Shiny"] or false
+				Data["Shiny"] = true --playerUnits[player.Name][Data.Name]["Shiny"] or false
 				
 				self:PlaceUnit(player,Data)
 				player.PlacementAmount.Value += 1
